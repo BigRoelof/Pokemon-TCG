@@ -39,7 +39,7 @@ class SearchViewModel(
         }
 
         searchJob = viewModelScope.launch {
-            delay(500) // debounce
+            delay(800) // debounce
             _uiState.value = SearchUiState.Loading
             val result = repository.searchCards(query)
             result.onSuccess { cards ->

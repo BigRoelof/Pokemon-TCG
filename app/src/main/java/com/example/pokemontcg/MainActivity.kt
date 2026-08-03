@@ -19,6 +19,25 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val okHttpClient = okhttp3.OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .header("User-Agent", "Mozilla/5.0 (Android; Mobile)")
+                    .build()
+                var response = chain.proceed(request)
+                var tryCount = 0
+                val maxLimit = 2
+                while (!response.isSuccessful && (response.code == 500 || response.code == 429 || response.code == 503) && tryCount < maxLimit) {
+                    tryCount++
+                    response.close()
+                    try {
+                        Thread.sleep(1000L * tryCount)
+                    } catch (e: InterruptedException) {
+                        break
+                    }
+                    response = chain.proceed(request)
+                }
+                response
+            }
             .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
             .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)

@@ -21,8 +21,14 @@ class PokemonRepository(
     suspend fun searchCards(query: String): Result<List<CardDto>> {
         return withContext(Dispatchers.IO) {
             try {
-                // Ensure query is formatted for API, e.g. name:charizard*
-                val searchQuery = if (query.contains(":")) query else "name:*$query*"
+                // Ensure query is formatted for API
+                val searchQuery = if (query.contains(":")) {
+                    query
+                } else {
+                    query.trim().split("\\s+".toRegex()).joinToString(" ") { term ->
+                        "(name:*$term* OR set.name:*$term*)"
+                    }
+                }
                 val response = api.searchCards(searchQuery)
                 Result.success(response.data)
             } catch (e: Exception) {
@@ -62,6 +68,12 @@ class PokemonRepository(
     suspend fun removeCardFromChaseList(cardId: String) {
         withContext(Dispatchers.IO) {
             dao.deleteCardById(cardId)
+        }
+    }
+
+    suspend fun updateCardObtainedStatus(cardId: String, obtained: Boolean) {
+        withContext(Dispatchers.IO) {
+            dao.updateCardObtainedStatus(cardId, obtained)
         }
     }
 }

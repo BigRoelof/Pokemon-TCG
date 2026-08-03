@@ -21,4 +21,7 @@ interface PokemonDao {
 
     @Query("DELETE FROM chase_cards WHERE id = :cardId")
     suspend fun deleteCardById(cardId: String)
+
+    @Query("UPDATE chase_cards SET obtained = :obtained WHERE id = :cardId")
+    suspend fun updateCardObtainedStatus(cardId: String, obtained: Boolean)
 }

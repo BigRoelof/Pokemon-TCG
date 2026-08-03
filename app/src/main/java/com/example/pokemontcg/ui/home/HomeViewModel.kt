@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 sealed class HomeUiState {
     object Loading : HomeUiState()
@@ -15,7 +16,7 @@ sealed class HomeUiState {
     data class Error(val message: String) : HomeUiState()
 }
 
-class HomeViewModel(repository: PokemonRepository) : ViewModel() {
+class HomeViewModel(private val repository: PokemonRepository) : ViewModel() {
 
     val uiState: StateFlow<HomeUiState> = repository.chaseCards
         .map { cards -> HomeUiState.Success(cards) }
@@ -24,4 +25,10 @@ class HomeViewModel(repository: PokemonRepository) : ViewModel() {
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = HomeUiState.Loading
         )
+
+    fun toggleObtainedStatus(cardId: String, currentStatus: Boolean) {
+        viewModelScope.launch {
+            repository.updateCardObtainedStatus(cardId, !currentStatus)
+        }
+    }
 }

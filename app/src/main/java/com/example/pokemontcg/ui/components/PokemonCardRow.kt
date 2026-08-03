@@ -13,6 +13,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+
 @Composable
 fun PokemonCardRow(
     id: String,
@@ -21,7 +24,9 @@ fun PokemonCardRow(
     number: String,
     imageUrl: String,
     onClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    obtained: Boolean? = null,
+    onObtainedClick: ((Boolean) -> Unit)? = null
 ) {
     Card(
         modifier = modifier
@@ -47,7 +52,7 @@ fun PokemonCardRow(
             
             Spacer(modifier = Modifier.width(16.dp))
             
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,
                     style = MaterialTheme.typography.titleLarge
@@ -62,6 +67,17 @@ fun PokemonCardRow(
                     text = "No. $number",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (obtained != null && onObtainedClick != null) {
+                Checkbox(
+                    checked = obtained,
+                    onCheckedChange = { onObtainedClick(obtained) },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = MaterialTheme.colorScheme.primary,
+                        uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 )
             }
         }
