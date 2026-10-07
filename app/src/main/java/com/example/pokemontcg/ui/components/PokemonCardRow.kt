@@ -4,12 +4,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 
@@ -21,7 +24,10 @@ fun PokemonCardRow(
     number: String,
     imageUrl: String,
     onClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    obtained: Boolean = false,
+    // When set, the row shows a checkbox to mark the card as obtained
+    onObtainedChange: ((Boolean) -> Unit)? = null
 ) {
     Card(
         modifier = modifier
@@ -47,7 +53,7 @@ fun PokemonCardRow(
             
             Spacer(modifier = Modifier.width(16.dp))
             
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,
                     style = MaterialTheme.typography.titleLarge
@@ -62,6 +68,24 @@ fun PokemonCardRow(
                     text = "No. $number",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (obtained) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "✓ Obtained",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            if (onObtainedChange != null) {
+                Checkbox(
+                    checked = obtained,
+                    onCheckedChange = onObtainedChange,
+                    modifier = Modifier.semantics {
+                        contentDescription = "Mark $name as obtained"
+                    }
                 )
             }
         }

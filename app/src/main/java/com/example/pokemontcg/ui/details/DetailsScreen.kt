@@ -2,6 +2,7 @@ package com.example.pokemontcg.ui.details
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -10,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,6 +34,7 @@ fun DetailsScreen(
 
     val uiState by viewModel.uiState.collectAsState()
     val isSaved by viewModel.isSaved.collectAsState()
+    val isObtained by viewModel.isObtained.collectAsState()
 
     Scaffold(
         topBar = {
@@ -101,6 +104,29 @@ fun DetailsScreen(
                         )
 
                         Spacer(modifier = Modifier.height(32.dp))
+
+                        if (isSaved) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.8f)
+                                    .toggleable(
+                                        value = isObtained,
+                                        role = Role.Switch,
+                                        onValueChange = viewModel::setObtained
+                                    )
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "I've obtained this card",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Switch(checked = isObtained, onCheckedChange = null)
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
 
                         Button(
                             onClick = { viewModel.toggleChaseList() },

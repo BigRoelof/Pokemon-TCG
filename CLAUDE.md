@@ -33,4 +33,4 @@ MVVM with a single repository and manual dependency injection:
 - Each screen (`ui/home`, `ui/search`, `ui/details`) has a sealed `*UiState` class and exposes `StateFlow`s collected with `collectAsState()`. Search debounces manually (cancel previous `Job` + `delay(500)`).
 - Navigation routes: `home` (start) → `search` → `details/{cardId}`, defined in `Routes`.
 - Room schemas are exported to `app/schemas/` (commit them). Changing `ChaseCardEntity` requires a version bump plus a migration in `data/database/Migrations.kt` (steps documented there); `MigrationTest` (androidTest) verifies the oldest schema migrates to the current one.
-- The `obtained` column exists in the entity but no UI reads or writes it yet.
+- `obtained` is toggled from Home (row checkbox) and Details (switch, only for saved cards). Home filtering and the progress counts live in the pure function `buildHomeState` (unit-tested).

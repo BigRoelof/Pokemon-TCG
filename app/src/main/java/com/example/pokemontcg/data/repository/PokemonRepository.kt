@@ -19,7 +19,8 @@ class PokemonRepository(
 
     val chaseCards: Flow<List<ChaseCardEntity>> = dao.getAllChaseCards()
 
-    fun isCardInChaseList(cardId: String): Flow<Boolean> = dao.isCardInChaseList(cardId)
+    /** Emits the saved card, or null while it isn't on the chase list. */
+    fun observeSavedCard(cardId: String): Flow<ChaseCardEntity?> = dao.observeCardById(cardId)
 
     suspend fun searchCards(query: String): Result<List<CardDto>> {
         return withContext(Dispatchers.IO) {
@@ -83,6 +84,12 @@ class PokemonRepository(
                 dateAdded = System.currentTimeMillis()
             )
             dao.insertCard(entity)
+        }
+    }
+
+    suspend fun setObtained(cardId: String, obtained: Boolean) {
+        withContext(Dispatchers.IO) {
+            dao.setObtained(cardId, obtained)
         }
     }
 

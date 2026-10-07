@@ -27,6 +27,9 @@ class DetailsViewModel(
     private val _isSaved = MutableStateFlow(false)
     val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
 
+    private val _isObtained = MutableStateFlow(false)
+    val isObtained: StateFlow<Boolean> = _isObtained.asStateFlow()
+
     private var currentCardId: String? = null
     private var savedStatusJob: Job? = null
     private var loadJob: Job? = null
@@ -37,8 +40,9 @@ class DetailsViewModel(
 
         savedStatusJob?.cancel()
         savedStatusJob = viewModelScope.launch {
-            repository.isCardInChaseList(cardId).collect { saved ->
-                _isSaved.value = saved
+            repository.observeSavedCard(cardId).collect { saved ->
+                _isSaved.value = saved != null
+                _isObtained.value = saved?.obtained == true
             }
         }
         fetchCard(cardId)
@@ -77,6 +81,13 @@ class DetailsViewModel(
                     repository.addCardToChaseList(state.card)
                 }
             }
+        }
+    }
+
+    fun setObtained(obtained: Boolean) {
+        val cardId = currentCardId ?: return
+        viewModelScope.launch {
+            repository.setObtained(cardId, obtained)
         }
     }
 }
