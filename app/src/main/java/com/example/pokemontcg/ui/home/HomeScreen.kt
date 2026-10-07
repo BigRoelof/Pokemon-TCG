@@ -22,14 +22,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pokemontcg.ui.components.CardTile
 import com.example.pokemontcg.ui.components.ErrorView
 import com.example.pokemontcg.ui.components.LoadingIndicator
@@ -44,7 +44,7 @@ fun HomeScreen(
     factory: ViewModelProvider.Factory,
     viewModel: HomeViewModel = viewModel(factory = factory)
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val success = uiState as? HomeUiState.Success
     val hasCards = success != null && success.totalCount > 0
 

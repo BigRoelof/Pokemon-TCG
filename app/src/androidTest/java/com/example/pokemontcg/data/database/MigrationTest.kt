@@ -19,6 +19,23 @@ class MigrationTest {
         PokemonDatabase::class.java
     )
 
+    @Test
+    fun migrate1To2AddsCatalogTablesAndKeepsChaseList() {
+        helper.createDatabase(testDb, 1).apply {
+            execSQL(
+                "INSERT INTO chase_cards (id, name, setName, number, imageUrl, largeImageUrl, obtained, dateAdded) " +
+                    "VALUES ('sv3-125', 'Charizard ex', 'Obsidian Flames', '125', 'small.png', 'large.png', 1, 1)"
+            )
+            close()
+        }
+        // Validates the migrated schema against the exported schemas/2.json
+        helper.runMigrationsAndValidate(testDb, 2, true, *ALL_MIGRATIONS).use { db ->
+            db.query("SELECT obtained FROM chase_cards WHERE id = 'sv3-125'").use { cursor ->
+                check(cursor.moveToFirst() && cursor.getInt(0) == 1) { "Saved card lost during migration" }
+            }
+        }
+    }
+
     /** Creates the oldest schema and checks Room can migrate it to the current version. */
     @Test
     fun migrateAllFromFirstVersion() {

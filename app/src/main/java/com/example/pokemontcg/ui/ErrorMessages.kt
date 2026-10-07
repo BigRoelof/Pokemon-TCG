@@ -3,14 +3,13 @@ package com.example.pokemontcg.ui
 import retrofit2.HttpException
 import java.io.IOException
 
-/** Maps network/API failures to a message that makes sense to the user. */
+/** Maps card database download failures to a message that makes sense to the user. */
 fun Throwable.toUserMessage(): String = when (this) {
-    is IOException -> "Couldn't reach the Pokémon TCG service. Check your internet connection."
-    is HttpException -> when {
-        code() >= 500 -> "The Pokémon TCG service is having trouble right now. Please try again."
-        code() == 404 -> "This card couldn't be found."
-        code() == 429 -> "Too many requests. Please wait a moment and try again."
-        else -> "The search couldn't be processed. Try different search terms."
+    is IOException -> "Couldn't download the card database. Check your internet connection."
+    is HttpException -> when (code()) {
+        403, 429 -> "The card database is busy. Try again in a few minutes."
+        in 500..599 -> "The card database server is having trouble. Try again later."
+        else -> "Couldn't download the card database (error ${code()})."
     }
-    else -> "Something went wrong. Please try again."
+    else -> "Couldn't update the card database."
 }

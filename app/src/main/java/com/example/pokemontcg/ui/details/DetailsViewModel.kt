@@ -2,9 +2,8 @@ package com.example.pokemontcg.ui.details
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.pokemontcg.data.api.model.CardDto
+import com.example.pokemontcg.data.model.Card
 import com.example.pokemontcg.data.repository.PokemonRepository
-import com.example.pokemontcg.ui.toUserMessage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,8 +12,8 @@ import kotlinx.coroutines.launch
 
 sealed class DetailsUiState {
     object Loading : DetailsUiState()
-    data class Success(val card: CardDto) : DetailsUiState()
-    data class Error(val message: String) : DetailsUiState()
+    data class Success(val card: Card) : DetailsUiState()
+    object NotFound : DetailsUiState()
 }
 
 class DetailsViewModel(
@@ -32,7 +31,6 @@ class DetailsViewModel(
 
     private var currentCardId: String? = null
     private var savedStatusJob: Job? = null
-    private var loadJob: Job? = null
 
     fun loadCard(cardId: String) {
         if (currentCardId == cardId) return
@@ -45,29 +43,9 @@ class DetailsViewModel(
                 _isObtained.value = saved?.obtained == true
             }
         }
-        fetchCard(cardId)
-    }
-
-    fun retry() {
-        currentCardId?.let(::fetchCard)
-    }
-
-    private fun fetchCard(cardId: String) {
-        loadJob?.cancel()
-        loadJob = viewModelScope.launch {
-            // Show the locally saved copy right away so saved cards also work offline,
-            // then refresh it with the full data from the API.
-            val savedCard = repository.getSavedCard(cardId)
-            _uiState.value = savedCard?.let { DetailsUiState.Success(it) } ?: DetailsUiState.Loading
-
-            repository.getCardDetails(cardId)
-                .onSuccess { card ->
-                    _uiState.value = DetailsUiState.Success(card)
-                }.onFailure { error ->
-                    if (savedCard == null) {
-                        _uiState.value = DetailsUiState.Error(error.toUserMessage())
-                    }
-                }
+        viewModelScope.launch {
+            _uiState.value = repository.getCard(cardId)?.let { DetailsUiState.Success(it) }
+                ?: DetailsUiState.NotFound
         }
     }
 

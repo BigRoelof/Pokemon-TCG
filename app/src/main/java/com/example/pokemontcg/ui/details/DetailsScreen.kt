@@ -27,7 +27,6 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,17 +34,21 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.pokemontcg.data.api.model.CardDto
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.pokemontcg.data.model.Card
 import com.example.pokemontcg.ui.components.CardCornerShape
 import com.example.pokemontcg.ui.components.CardImage
-import com.example.pokemontcg.ui.components.ErrorView
 import com.example.pokemontcg.ui.components.LoadingIndicator
+import com.example.pokemontcg.ui.components.MessageView
 import com.example.pokemontcg.ui.components.PokeBall
 import com.example.pokemontcg.ui.components.PokedexHeader
 import com.example.pokemontcg.ui.theme.CaughtYellow
 import com.example.pokemontcg.ui.theme.Ink
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun DetailsScreen(
@@ -58,9 +61,9 @@ fun DetailsScreen(
         viewModel.loadCard(cardId)
     }
 
-    val uiState by viewModel.uiState.collectAsState()
-    val isSaved by viewModel.isSaved.collectAsState()
-    val isObtained by viewModel.isObtained.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isSaved by viewModel.isSaved.collectAsStateWithLifecycle()
+    val isObtained by viewModel.isObtained.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -76,9 +79,9 @@ fun DetailsScreen(
             .consumeWindowInsets(innerPadding)
         when (val state = uiState) {
             is DetailsUiState.Loading -> LoadingIndicator(contentModifier)
-            is DetailsUiState.Error -> ErrorView(
-                message = state.message,
-                onRetry = viewModel::retry,
+            is DetailsUiState.NotFound -> MessageView(
+                title = "Card not found",
+                message = "This card isn't in the card database. It may have been removed from the dataset.",
                 modifier = contentModifier
             )
             is DetailsUiState.Success -> CardDetails(
@@ -95,7 +98,7 @@ fun DetailsScreen(
 
 @Composable
 private fun CardDetails(
-    card: CardDto,
+    card: Card,
     isSaved: Boolean,
     isCaught: Boolean,
     onToggleChaseList: () -> Unit,
@@ -109,7 +112,7 @@ private fun CardDetails(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CardImage(
-            imageUrl = card.images?.large ?: card.images?.small,
+            imageUrl = card.imageLarge ?: card.imageSmall,
             contentDescription = card.name,
             caught = isSaved && isCaught,
             modifier = Modifier
@@ -128,7 +131,7 @@ private fun CardDetails(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = card.set?.name ?: "Unknown set",
+            text = card.setName,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
@@ -145,6 +148,7 @@ private fun CardDetails(
             modifier = Modifier.widthIn(max = 400.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            CardFacts(card)
             if (isSaved) {
                 CaughtToggle(caught = isCaught, onCaughtChange = onCaughtChange)
                 OutlinedButton(
@@ -203,3 +207,44 @@ private fun CaughtToggle(caught: Boolean, onCaughtChange: (Boolean) -> Unit) {
         }
     }
 }
+
+/** Facts from the dataset; rows the dataset doesn't have for this card are left out. */
+@Composable
+private fun CardFacts(card: Card) {
+    val facts = listOfNotNull(
+        card.rarity?.let { "Rarity" to it },
+        card.artist?.let { "Illustrator" to it },
+        card.setSeries?.let { "Series" to it },
+        card.releaseDate?.let { "Released" to formatReleaseDate(it) }
+    )
+    if (facts.isEmpty()) return
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            facts.forEach { (label, value) ->
+                Row {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(96.dp)
+                    )
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** `2023/01/20` → `20 January 2023` in the user's locale; falls back to the raw text. */
+private fun formatReleaseDate(date: String): String = runCatching {
+    val parsed = SimpleDateFormat("yyyy/MM/dd", Locale.US).parse(date)!!
+    DateFormat.getDateInstance(DateFormat.LONG).format(parsed)
+}.getOrDefault(date)
