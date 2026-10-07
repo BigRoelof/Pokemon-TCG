@@ -32,6 +32,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.pokemontcg.ui.theme.BallWhite
 import com.example.pokemontcg.ui.theme.CaughtYellow
@@ -132,7 +133,8 @@ private fun BallBand(progress: Float?) {
         val travel = maxWidth - KnobSize - knobInset * 2
         Box(
             modifier = Modifier
-                .offset(x = knobInset + travel * animatedProgress)
+                // Lambda offset: the knob moves every animation frame without recomposing
+                .offset { IntOffset((knobInset + travel * animatedProgress).roundToPx(), 0) }
                 .size(KnobSize)
                 .background(BallWhite, CircleShape)
                 .border(5.dp, Ink, CircleShape),

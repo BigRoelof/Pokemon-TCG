@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon layer: the ball as line art; the system tints it -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="4"
+        android:fillColor="#00000000"
+        android:pathData="M30,54 A24,24 0,1 1,78 54 A24,24 0,1 1,30 54 Z M30,54 L46,54 M62,54 L78,54 M46,54 A8,8 0,1 1,62 54 A8,8 0,1 1,46 54 Z" />
+    <!-- Filled top half, as on the colored icon -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M30,54 A24,24 0,0 1,78 54 L62,54 A8,8 0,0 0,46 54 Z" />
+</vector>

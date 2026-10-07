@@ -4,7 +4,7 @@ import android.content.Context
 import com.example.pokemontcg.data.api.PokemonApi
 import com.example.pokemontcg.data.database.PokemonDatabase
 import com.example.pokemontcg.data.repository.PokemonRepository
-import com.example.pokemontcg.ui.ViewModelFactory
+import com.example.pokemontcg.ui.createViewModelFactory
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -30,5 +30,5 @@ class AppContainer(context: Context) {
 
     val repository = PokemonRepository(api, database.pokemonDao())
 
-    val viewModelFactory = ViewModelFactory(repository)
+    val viewModelFactory = createViewModelFactory(repository)
 }

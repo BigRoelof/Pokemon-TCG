@@ -6,8 +6,8 @@ import androidx.compose.ui.Modifier
 @Composable
 fun ErrorView(
     message: String,
-    onRetry: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onRetry: (() -> Unit)? = null
 ) {
     MessageView(
         title = "Couldn't load cards",

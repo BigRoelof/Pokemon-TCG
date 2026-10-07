@@ -1,5 +1,6 @@
 package com.example.pokemontcg.ui.details
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -35,7 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pokemontcg.data.api.model.CardDto
-import com.example.pokemontcg.ui.ViewModelFactory
+import androidx.lifecycle.ViewModelProvider
 import com.example.pokemontcg.ui.components.CardCornerShape
 import com.example.pokemontcg.ui.components.CardImage
 import com.example.pokemontcg.ui.components.ErrorView
@@ -49,7 +51,7 @@ import com.example.pokemontcg.ui.theme.Ink
 fun DetailsScreen(
     cardId: String,
     onNavigateBack: () -> Unit,
-    factory: ViewModelFactory,
+    factory: ViewModelProvider.Factory,
     viewModel: DetailsViewModel = viewModel(factory = factory)
 ) {
     LaunchedEffect(cardId) {
@@ -145,7 +147,12 @@ private fun CardDetails(
         ) {
             if (isSaved) {
                 CaughtToggle(caught = isCaught, onCaughtChange = onCaughtChange)
-                OutlinedButton(onClick = onToggleChaseList, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = onToggleChaseList,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                ) {
                     Text("Remove from chase list")
                 }
             } else {

@@ -1,6 +1,5 @@
 package com.example.pokemontcg.ui.home
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,10 +25,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.pokemontcg.ui.ViewModelFactory
+import androidx.lifecycle.ViewModelProvider
 import com.example.pokemontcg.ui.components.CardTile
 import com.example.pokemontcg.ui.components.ErrorView
 import com.example.pokemontcg.ui.components.LoadingIndicator
@@ -41,7 +41,7 @@ import com.example.pokemontcg.ui.theme.BallWhite
 fun HomeScreen(
     onNavigateToSearch: () -> Unit,
     onNavigateToDetails: (String) -> Unit,
-    factory: ViewModelFactory,
+    factory: ViewModelProvider.Factory,
     viewModel: HomeViewModel = viewModel(factory = factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -105,7 +105,6 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ChaseGrid(
     state: HomeUiState.Success,
@@ -154,7 +153,7 @@ private fun ChaseGrid(
                 onClick = { onCardClick(card.id) },
                 caught = card.obtained,
                 onCaughtChange = { caught -> onCaughtChange(card.id, caught) },
-                modifier = Modifier.animateItemPlacement()
+                modifier = Modifier.animateItem()
             )
         }
     }
@@ -172,8 +171,16 @@ private fun FilterRow(selected: ChaseFilter, onFilterSelected: (ChaseFilter) -> 
                 onClick = { onFilterSelected(filter) },
                 label = { Text(filter.label) },
                 colors = FilterChipDefaults.filterChipColors(
+                    containerColor = Color.Transparent,
+                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     selectedContainerColor = MaterialTheme.colorScheme.secondary,
                     selectedLabelColor = MaterialTheme.colorScheme.onSecondary
+                ),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = filter == selected,
+                    borderColor = MaterialTheme.colorScheme.outline,
+                    selectedBorderColor = Color.Transparent
                 )
             )
         }

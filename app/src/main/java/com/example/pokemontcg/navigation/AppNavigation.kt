@@ -6,7 +6,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.pokemontcg.ui.ViewModelFactory
+import androidx.lifecycle.ViewModelProvider
 import com.example.pokemontcg.ui.details.DetailsScreen
 import com.example.pokemontcg.ui.home.HomeScreen
 import com.example.pokemontcg.ui.search.SearchScreen
@@ -22,7 +22,7 @@ object Routes {
 @Composable
 fun AppNavigation(
     navController: NavHostController,
-    factory: ViewModelFactory
+    factory: ViewModelProvider.Factory
 ) {
     NavHost(navController = navController, startDestination = Routes.HOME) {
         composable(Routes.HOME) {

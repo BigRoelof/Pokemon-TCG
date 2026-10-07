@@ -42,7 +42,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.pokemontcg.ui.ViewModelFactory
+import androidx.lifecycle.ViewModelProvider
 import com.example.pokemontcg.ui.components.CardTile
 import com.example.pokemontcg.ui.components.ErrorView
 import com.example.pokemontcg.ui.components.LoadingIndicator
@@ -56,7 +56,7 @@ import com.example.pokemontcg.ui.theme.SlateText
 fun SearchScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDetails: (String) -> Unit,
-    factory: ViewModelFactory,
+    factory: ViewModelProvider.Factory,
     viewModel: SearchViewModel = viewModel(factory = factory)
 ) {
     val query by viewModel.searchQuery.collectAsState()

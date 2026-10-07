@@ -1,27 +1,16 @@
 package com.example.pokemontcg.ui
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.pokemontcg.data.repository.PokemonRepository
 import com.example.pokemontcg.ui.details.DetailsViewModel
 import com.example.pokemontcg.ui.home.HomeViewModel
 import com.example.pokemontcg.ui.search.SearchViewModel
 
-class ViewModelFactory(
-    private val repository: PokemonRepository
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return when {
-            modelClass.isAssignableFrom(HomeViewModel::class.java) -> {
-                HomeViewModel(repository) as T
-            }
-            modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
-                SearchViewModel(repository) as T
-            }
-            modelClass.isAssignableFrom(DetailsViewModel::class.java) -> {
-                DetailsViewModel(repository) as T
-            }
-            else -> throw IllegalArgumentException("Unknown ViewModel class")
-        }
-    }
+/** Creates every ViewModel in the app. Add an `initializer` here for each new ViewModel. */
+fun createViewModelFactory(repository: PokemonRepository): ViewModelProvider.Factory = viewModelFactory {
+    initializer { HomeViewModel(repository) }
+    initializer { SearchViewModel(repository) }
+    initializer { DetailsViewModel(repository) }
 }
