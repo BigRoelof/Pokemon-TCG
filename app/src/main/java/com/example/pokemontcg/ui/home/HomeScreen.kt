@@ -14,7 +14,11 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -22,18 +26,24 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.pokemontcg.data.model.ChaseSort
 import com.example.pokemontcg.ui.components.CardTile
 import com.example.pokemontcg.ui.components.ErrorView
 import com.example.pokemontcg.ui.components.LoadingIndicator
@@ -127,6 +137,7 @@ fun HomeScreen(
                         state = state,
                         innerPadding = innerPadding,
                         onFilterSelected = viewModel::onFilterSelected,
+                        onSortSelected = viewModel::onSortSelected,
                         onOpenSetPicker = { showSetPicker = true },
                         onClearSet = { viewModel.onSetSelected(null) },
                         onCardClick = onNavigateToDetails,
@@ -143,6 +154,7 @@ private fun ChaseGrid(
     state: HomeUiState.Success,
     innerPadding: PaddingValues,
     onFilterSelected: (ChaseFilter) -> Unit,
+    onSortSelected: (ChaseSort) -> Unit,
     onOpenSetPicker: () -> Unit,
     onClearSet: () -> Unit,
     onCardClick: (String) -> Unit,
@@ -163,17 +175,23 @@ private fun ChaseGrid(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        // Only worth offering once the list spans more than one set
-        if (state.sets.size > 1 || state.setName != null) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Box(modifier = Modifier.padding(horizontal = 4.dp)) {
-                    SetChip(
-                        selectedSet = state.sets.firstOrNull { it.name == state.setName },
-                        onOpenPicker = onOpenSetPicker,
-                        onClear = onClearSet,
-                        onHeader = false
-                    )
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Row(
+                modifier = Modifier.padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // A set filter is only worth offering once the list spans more than one set
+                Box(modifier = Modifier.weight(1f)) {
+                    if (state.sets.size > 1 || state.setName != null) {
+                        SetChip(
+                            selectedSet = state.sets.firstOrNull { it.name == state.setName },
+                            onOpenPicker = onOpenSetPicker,
+                            onClear = onClearSet,
+                            onHeader = false
+                        )
+                    }
                 }
+                SortMenu(selected = state.sort, onSortSelected = onSortSelected)
             }
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -235,3 +253,34 @@ private fun FilterRow(selected: ChaseFilter, onFilterSelected: (ChaseFilter) -> 
         }
     }
 }
+
+@Composable
+private fun SortMenu(selected: ChaseSort, onSortSelected: (ChaseSort) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        TextButton(
+            onClick = { expanded = true },
+            modifier = Modifier.semantics { contentDescription = "Sort by: ${selected.label}" }
+        ) {
+            Text(selected.label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ChaseSort.entries.forEach { sort ->
+                DropdownMenuItem(
+                    text = { Text(sort.label) },
+                    onClick = {
+                        onSortSelected(sort)
+                        expanded = false
+                    },
+                    trailingIcon = if (sort == selected) {
+                        { Icon(Icons.Default.Check, contentDescription = "Selected") }
+                    } else {
+                        null
+                    }
+                )
+            }
+        }
+    }
+}
+

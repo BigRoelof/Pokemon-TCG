@@ -3,6 +3,7 @@ package com.example.pokemontcg.ui.home
 import com.example.pokemontcg.data.database.CardPriceEntity
 import com.example.pokemontcg.data.database.CardSetWithCount
 import com.example.pokemontcg.data.database.ChaseCardEntity
+import com.example.pokemontcg.data.model.ChaseSort
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -94,4 +95,52 @@ class BuildHomeStateTest {
     }
 
     private fun price(id: String, value: Double?) = CardPriceEntity(id, null, value, null, null, null, null, 0)
+
+    private fun sortCard(id: String, name: String, setName: String, number: String, added: Long) =
+        ChaseCardEntity(id, name, setName, number, "", "", false, added)
+
+    private val unsorted = listOf(
+        sortCard("base1-4", "Charizard", "Base", "4", added = 1),
+        sortCard("sv3pt5-199", "Charizard ex", "151", "199", added = 3),
+        sortCard("sv3pt5-25", "pikachu", "151", "25", added = 2),
+        sortCard("sv3-125", "Arcanine", "Obsidian Flames", "125", added = 4)
+    )
+
+    private val sortPrices = mapOf(
+        "base1-4" to price("base1-4", 500.0),
+        "sv3pt5-199" to price("sv3pt5-199", 395.75),
+        "sv3-125" to price("sv3-125", 3.5)
+        // pikachu has no price
+    )
+
+    private fun order(sort: ChaseSort) =
+        buildHomeState(unsorted, ChaseFilter.ALL, catalogSets = catalogSets, prices = sortPrices, sort = sort).cards.map { it.id }
+
+    @Test
+    fun newestAddedFirstByDefault() {
+        assertEquals(listOf("sv3-125", "sv3pt5-199", "sv3pt5-25", "base1-4"), order(ChaseSort.NEWEST))
+        assertEquals(ChaseSort.NEWEST, buildHomeState(unsorted, ChaseFilter.ALL).sort)
+    }
+
+    @Test
+    fun priceSortsPutCardsWithoutAPriceLast() {
+        assertEquals(listOf("base1-4", "sv3pt5-199", "sv3-125", "sv3pt5-25"), order(ChaseSort.PRICE_HIGH))
+        assertEquals(listOf("sv3-125", "sv3pt5-199", "base1-4", "sv3pt5-25"), order(ChaseSort.PRICE_LOW))
+    }
+
+    @Test
+    fun nameSortIgnoresCase() {
+        assertEquals(listOf("sv3-125", "base1-4", "sv3pt5-199", "sv3pt5-25"), order(ChaseSort.NAME))
+    }
+
+    @Test
+    fun setSortIsNewestSetFirstThenCardNumber() {
+        assertEquals(listOf("sv3pt5-25", "sv3pt5-199", "sv3-125", "base1-4"), order(ChaseSort.SET))
+    }
+
+    @Test
+    fun sortingAppliesAfterFiltering() {
+        val state = buildHomeState(unsorted, ChaseFilter.ALL, setName = "151", prices = sortPrices, sort = ChaseSort.PRICE_HIGH)
+        assertEquals(listOf("sv3pt5-199", "sv3pt5-25"), state.cards.map { it.id })
+    }
 }

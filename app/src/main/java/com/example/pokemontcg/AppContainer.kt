@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.pokemontcg.data.catalog.CatalogApi
 import com.example.pokemontcg.data.catalog.CatalogSync
 import com.example.pokemontcg.data.database.PokemonDatabase
+import com.example.pokemontcg.data.preferences.UserPreferences
 import com.example.pokemontcg.data.prices.PriceApi
 import com.example.pokemontcg.data.prices.PriceService
 import com.example.pokemontcg.data.repository.PokemonRepository
@@ -56,5 +57,7 @@ class AppContainer(context: Context) {
         priceService = priceService
     )
 
-    val viewModelFactory = createViewModelFactory(repository)
+    private val preferences = UserPreferences(context)
+
+    val viewModelFactory = createViewModelFactory(repository, preferences)
 }
