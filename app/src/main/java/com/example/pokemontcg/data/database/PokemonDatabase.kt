@@ -11,9 +11,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [
         ChaseCardEntity::class, CatalogCardEntity::class, CardSetEntity::class, CatalogFileEntity::class,
-        CardPriceEntity::class
+        CardPriceEntity::class, CollectionCardEntity::class
     ],
-    version = 5,
+    // 6: collection_cards; caught chase cards moved there (manual MIGRATION_5_6)
+    version = 6,
     exportSchema = true,
     autoMigrations = [
         // 2: card catalog tables
@@ -33,6 +34,8 @@ abstract class PokemonDatabase : RoomDatabase() {
     abstract fun catalogDao(): CatalogDao
 
     abstract fun priceDao(): PriceDao
+
+    abstract fun collectionDao(): CollectionDao
 
     companion object {
         const val DATABASE_NAME = "pokemon_tcg_database"

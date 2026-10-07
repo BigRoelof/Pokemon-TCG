@@ -80,6 +80,28 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate5To6MovesCaughtCardsIntoTheCollection() {
+        helper.createDatabase(testDb, 5).apply {
+            execSQL(
+                "INSERT INTO chase_cards (id, name, setName, number, imageUrl, largeImageUrl, obtained, dateAdded) VALUES " +
+                    "('swsh12pt5gg-GG55', 'Regigigas VSTAR', 'Crown Zenith Galarian Gallery', 'GG55', 's', 'l', 1, 111), " +
+                    "('basep-1', 'Pikachu', 'Wizards Black Star Promos', '1', 's', 'l', 0, 222)"
+            )
+            close()
+        }
+        helper.runMigrationsAndValidate(testDb, 6, true, *ALL_MIGRATIONS).use { db ->
+            db.query("SELECT id, addedAt FROM collection_cards").use { cursor ->
+                check(cursor.count == 1 && cursor.moveToFirst()) { "Expected one collection card" }
+                check(cursor.getString(0) == "swsh12pt5gg-GG55" && cursor.getLong(1) == 111L) { "Caught card or its date lost" }
+            }
+            db.query("SELECT id, dateAdded FROM chase_cards").use { cursor ->
+                check(cursor.count == 1 && cursor.moveToFirst()) { "Expected one chase card" }
+                check(cursor.getString(0) == "basep-1" && cursor.getLong(1) == 222L) { "Chase card or its date lost" }
+            }
+        }
+    }
+
     /** Creates the oldest schema and checks Room can migrate it to the current version. */
     @Test
     fun migrateAllFromFirstVersion() {

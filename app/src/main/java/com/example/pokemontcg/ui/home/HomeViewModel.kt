@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pokemontcg.data.database.CardPriceEntity
 import com.example.pokemontcg.data.database.CardSetWithCount
-import com.example.pokemontcg.data.database.ChaseCardEntity
 import com.example.pokemontcg.data.model.CardNumberOrder
 import com.example.pokemontcg.data.model.ChaseSort
+import com.example.pokemontcg.data.model.TrackedCard
 import com.example.pokemontcg.data.preferences.UserPreferences
 import com.example.pokemontcg.data.repository.PokemonRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +26,7 @@ sealed class HomeUiState {
     object Loading : HomeUiState()
     data class Success(
         /** Cards matching [setName] and [filter], in [sort] order. */
-        val cards: List<ChaseCardEntity>,
+        val cards: List<TrackedCard>,
         val filter: ChaseFilter,
         val sort: ChaseSort = ChaseSort.NEWEST,
         /** Counts cover the chosen set (or the whole list), regardless of [filter]. */
@@ -49,7 +49,7 @@ sealed class HomeUiState {
 }
 
 fun buildHomeState(
-    cards: List<ChaseCardEntity>,
+    cards: List<TrackedCard>,
     filter: ChaseFilter,
     setName: String? = null,
     catalogSets: List<CardSetWithCount> = emptyList(),
@@ -64,17 +64,17 @@ fun buildHomeState(
     return HomeUiState.Success(
         cards = when (filter) {
             ChaseFilter.ALL -> inSet
-            ChaseFilter.CHASING -> inSet.filterNot { it.obtained }
-            ChaseFilter.OBTAINED -> inSet.filter { it.obtained }
+            ChaseFilter.CHASING -> inSet.filterNot { it.owned }
+            ChaseFilter.OBTAINED -> inSet.filter { it.owned }
         }.sortedWith(chaseOrder(sort, knownPrices, sets)),
         filter = filter,
         sort = sort,
-        obtainedCount = inSet.count { it.obtained },
+        obtainedCount = inSet.count { it.owned },
         totalCount = inSet.size,
         setName = activeSet,
         sets = sets,
         prices = knownPrices,
-        valueToChase = inSet.filterNot { it.obtained }.sumOf { knownPrices[it.id] ?: 0.0 }
+        valueToChase = inSet.filterNot { it.owned }.sumOf { knownPrices[it.id] ?: 0.0 }
     )
 }
 
@@ -83,27 +83,27 @@ private fun chaseOrder(
     sort: ChaseSort,
     prices: Map<String, Double>,
     sets: List<CardSetWithCount>
-): Comparator<ChaseCardEntity> {
-    val newest = compareByDescending<ChaseCardEntity> { it.dateAdded }
+): Comparator<TrackedCard> {
+    val newest = compareByDescending<TrackedCard> { it.addedAt }
     return when (sort) {
         ChaseSort.NEWEST -> newest
         // Cards without a price go last in both directions
-        ChaseSort.PRICE_HIGH -> compareBy<ChaseCardEntity> { prices[it.id] == null }
+        ChaseSort.PRICE_HIGH -> compareBy<TrackedCard> { prices[it.id] == null }
             .thenByDescending { prices[it.id] ?: 0.0 }.then(newest)
-        ChaseSort.PRICE_LOW -> compareBy<ChaseCardEntity> { prices[it.id] == null }
+        ChaseSort.PRICE_LOW -> compareBy<TrackedCard> { prices[it.id] == null }
             .thenBy { prices[it.id] ?: 0.0 }.then(newest)
-        ChaseSort.NAME -> compareBy<ChaseCardEntity, String>(String.CASE_INSENSITIVE_ORDER) { it.name }
+        ChaseSort.NAME -> compareBy<TrackedCard, String>(String.CASE_INSENSITIVE_ORDER) { it.name }
             .thenBy { it.setName }.then(newest)
         ChaseSort.SET -> {
             // `sets` is already newest set first
             val setRank = sets.withIndex().associate { (index, set) -> set.name to index }
-            compareBy<ChaseCardEntity> { setRank[it.setName] ?: Int.MAX_VALUE }
+            compareBy<TrackedCard> { setRank[it.setName] ?: Int.MAX_VALUE }
                 .thenBy(CardNumberOrder) { it.number }.then(newest)
         }
     }
 }
 
-private fun chaseListSets(cards: List<ChaseCardEntity>, catalogSets: List<CardSetWithCount>): List<CardSetWithCount> {
+private fun chaseListSets(cards: List<TrackedCard>, catalogSets: List<CardSetWithCount>): List<CardSetWithCount> {
     val catalogByName = catalogSets.associateBy { it.name }
     return cards.groupingBy { it.setName }.eachCount().map { (name, count) ->
         val known = catalogByName[name]
@@ -132,7 +132,7 @@ class HomeViewModel(
     }
 
     val uiState: StateFlow<HomeUiState> =
-        combine(repository.chaseCards, listOptions, repository.catalogSets, repository.prices) { cards, options, sets, prices ->
+        combine(repository.trackedCards, listOptions, repository.catalogSets, repository.prices) { cards, options, sets, prices ->
             val (filter, setName, sort) = options
             buildHomeState(cards, filter, setName, sets, prices, sort)
         }
@@ -144,7 +144,7 @@ class HomeViewModel(
 
     init {
         // Prices are cached for a day; this only fetches missing or stale ones
-        viewModelScope.launch { repository.refreshChaseListPrices() }
+        viewModelScope.launch { repository.refreshTrackedPrices() }
     }
 
     fun onFilterSelected(newFilter: ChaseFilter) {
@@ -157,9 +157,10 @@ class HomeViewModel(
         setName.value = name
     }
 
-    fun setObtained(cardId: String, obtained: Boolean) {
+    /** Catching moves the card into the collection; un-catching puts it back on the chase list. */
+    fun setOwned(cardId: String, owned: Boolean) {
         viewModelScope.launch {
-            repository.setObtained(cardId, obtained)
+            repository.setOwned(cardId, owned)
         }
     }
 }

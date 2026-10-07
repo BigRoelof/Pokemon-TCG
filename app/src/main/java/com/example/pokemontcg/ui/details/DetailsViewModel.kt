@@ -51,9 +51,9 @@ class DetailsViewModel(
 
         savedStatusJob?.cancel()
         savedStatusJob = viewModelScope.launch {
-            repository.observeSavedCard(cardId).collect { saved ->
-                _isSaved.value = saved != null
-                _isObtained.value = saved?.obtained == true
+            repository.observeTrackedCard(cardId).collect { tracked ->
+                _isSaved.value = tracked != null
+                _isObtained.value = tracked?.owned == true
             }
         }
         viewModelScope.launch {
@@ -82,7 +82,7 @@ class DetailsViewModel(
         if (state is DetailsUiState.Success) {
             viewModelScope.launch {
                 if (_isSaved.value) {
-                    repository.removeCardFromChaseList(state.card.id)
+                    repository.removeCard(state.card.id)
                 } else {
                     repository.addCardToChaseList(state.card)
                 }
@@ -93,7 +93,7 @@ class DetailsViewModel(
     fun setObtained(obtained: Boolean) {
         val cardId = currentCardId ?: return
         viewModelScope.launch {
-            repository.setObtained(cardId, obtained)
+            repository.setOwned(cardId, obtained)
         }
     }
 }

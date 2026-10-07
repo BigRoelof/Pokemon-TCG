@@ -141,7 +141,7 @@ fun HomeScreen(
                         onOpenSetPicker = { showSetPicker = true },
                         onClearSet = { viewModel.onSetSelected(null) },
                         onCardClick = onNavigateToDetails,
-                        onCaughtChange = viewModel::setObtained
+                        onCaughtChange = viewModel::setOwned
                     )
                 }
             }
@@ -217,7 +217,7 @@ private fun ChaseGrid(
                 number = card.number,
                 imageUrl = card.imageUrl,
                 onClick = { onCardClick(card.id) },
-                caught = card.obtained,
+                caught = card.owned,
                 onCaughtChange = { caught -> onCaughtChange(card.id, caught) },
                 price = state.prices[card.id]?.let(::formatEuro),
                 modifier = Modifier.animateItem()

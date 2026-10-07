@@ -2,16 +2,16 @@ package com.example.pokemontcg.ui.home
 
 import com.example.pokemontcg.data.database.CardPriceEntity
 import com.example.pokemontcg.data.database.CardSetWithCount
-import com.example.pokemontcg.data.database.ChaseCardEntity
 import com.example.pokemontcg.data.model.ChaseSort
+import com.example.pokemontcg.data.model.TrackedCard
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BuildHomeStateTest {
 
-    private fun card(id: String, obtained: Boolean, setName: String = "Set") = ChaseCardEntity(
+    private fun card(id: String, obtained: Boolean, setName: String = "Set") = TrackedCard(
         id = id, name = id, setName = setName, number = "1",
-        imageUrl = "", largeImageUrl = "", obtained = obtained, dateAdded = 0
+        imageUrl = "", largeImageUrl = "", addedAt = 0, owned = obtained
     )
 
     private val cards = listOf(card("a", obtained = true), card("b", obtained = false), card("c", obtained = false))
@@ -97,7 +97,7 @@ class BuildHomeStateTest {
     private fun price(id: String, value: Double?) = CardPriceEntity(id, null, value, null, null, null, null, 0)
 
     private fun sortCard(id: String, name: String, setName: String, number: String, added: Long) =
-        ChaseCardEntity(id, name, setName, number, "", "", false, added)
+        TrackedCard(id, name, setName, number, "", "", addedAt = added, owned = false)
 
     private val unsorted = listOf(
         sortCard("base1-4", "Charizard", "Base", "4", added = 1),
