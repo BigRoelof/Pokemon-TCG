@@ -237,6 +237,7 @@ private fun CaughtToggle(caught: Boolean, onCaughtChange: (Boolean) -> Unit) {
 @Composable
 private fun CardFacts(card: Card) {
     val facts = listOfNotNull(
+        card.typeLabel?.let { "Type" to it },
         card.rarity?.let { "Rarity" to it },
         card.artist?.let { "Illustrator" to it },
         card.setSeries?.let { "Series" to it },

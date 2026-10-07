@@ -8,6 +8,7 @@ import com.example.pokemontcg.data.database.CatalogCardEntity
 import com.example.pokemontcg.data.database.CatalogCardWithSet
 import com.example.pokemontcg.data.database.CatalogDao
 import com.example.pokemontcg.data.database.CatalogFileEntity
+import com.example.pokemontcg.data.database.NameCount
 import com.example.pokemontcg.data.database.PriceDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -123,13 +124,14 @@ class PriceServiceTest {
 
     private class FakeCatalogDao : CatalogDao {
         override suspend fun getCard(cardId: String): CatalogCardWithSet? = when (cardId) {
-            "sv3-125" -> CatalogCardWithSet("sv3-125", "Charizard ex", "125", null, null, null, null, "sv3", "Obsidian Flames", null, null)
+            "sv3-125" -> CatalogCardWithSet("sv3-125", "Charizard ex", "125", null, null, null, null, "sv3", "Obsidian Flames", null, null, "Pokémon", ",Fire,")
             else -> null
         }
 
         override suspend fun search(query: SupportSQLiteQuery) = emptyList<CatalogCardWithSet>()
         override fun observeSets(): Flow<List<CardSetWithCount>> = flowOf(emptyList())
         override fun observeCardCount(): Flow<Int> = flowOf(0)
+        override fun observeRarities(): Flow<List<NameCount>> = flowOf(emptyList())
         override suspend fun getFiles() = emptyList<CatalogFileEntity>()
         override suspend fun upsertSets(sets: List<CardSetEntity>) = Unit
         override suspend fun upsertFile(file: CatalogFileEntity) = Unit

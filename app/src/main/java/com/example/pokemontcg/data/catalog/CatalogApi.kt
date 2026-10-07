@@ -50,6 +50,8 @@ data class CardJson(
     val number: String,
     val rarity: String?,
     val artist: String?,
+    val supertype: String?,
+    val types: List<String>?,
     val images: CardImagesJson?
 )
 

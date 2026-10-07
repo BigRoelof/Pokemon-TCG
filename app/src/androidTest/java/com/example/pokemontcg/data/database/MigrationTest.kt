@@ -65,6 +65,21 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate4To5AddsTypesAndRedownloadsEveryCardFile() {
+        helper.createDatabase(testDb, 4).apply {
+            execSQL("INSERT INTO catalog_files (path, sha) VALUES ('sets/en.json', 'a'), ('cards/en/sv3.json', 'b'), ('cards/en/base1.json', 'c')")
+            close()
+        }
+        helper.runMigrationsAndValidate(testDb, 5, true, *ALL_MIGRATIONS).use { db ->
+            db.query("SELECT path FROM catalog_files").use { cursor ->
+                check(cursor.count == 1 && cursor.moveToFirst() && cursor.getString(0) == "sets/en.json") {
+                    "Card files should be marked for download again, the sets file kept"
+                }
+            }
+        }
+    }
+
     /** Creates the oldest schema and checks Room can migrate it to the current version. */
     @Test
     fun migrateAllFromFirstVersion() {

@@ -13,7 +13,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ChaseCardEntity::class, CatalogCardEntity::class, CardSetEntity::class, CatalogFileEntity::class,
         CardPriceEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
     autoMigrations = [
         // 2: card catalog tables
@@ -21,7 +21,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         // 3: set collector codes (card_sets.ptcgoCode)
         AutoMigration(from = 2, to = 3, spec = Migration2To3::class),
         // 4: Cardmarket price cache
-        AutoMigration(from = 3, to = 4)
+        AutoMigration(from = 3, to = 4),
+        // 5: card supertype and types, rarities cleaned up
+        AutoMigration(from = 4, to = 5, spec = Migration4To5::class)
     ]
 )
 abstract class PokemonDatabase : RoomDatabase() {
@@ -58,5 +60,12 @@ abstract class PokemonDatabase : RoomDatabase() {
 class Migration2To3 : AutoMigrationSpec {
     override fun onPostMigrate(db: SupportSQLiteDatabase) {
         db.execSQL("DELETE FROM catalog_files WHERE path = 'sets/en.json'")
+    }
+}
+
+/** Forgets every card file's hash, so the next sync downloads all cards again to fill the new columns. */
+class Migration4To5 : AutoMigrationSpec {
+    override fun onPostMigrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DELETE FROM catalog_files WHERE path LIKE 'cards/%'")
     }
 }

@@ -8,9 +8,11 @@ import com.example.pokemontcg.data.database.CardSetWithCount
 import com.example.pokemontcg.data.database.CatalogCardWithSet
 import com.example.pokemontcg.data.database.CatalogDao
 import com.example.pokemontcg.data.database.ChaseCardEntity
+import com.example.pokemontcg.data.database.NameCount
 import com.example.pokemontcg.data.database.PokemonDao
 import com.example.pokemontcg.data.database.PriceDao
 import com.example.pokemontcg.data.model.Card
+import com.example.pokemontcg.data.model.SearchFilters
 import com.example.pokemontcg.data.prices.PriceService
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,9 +58,12 @@ class PokemonRepository(
     /** Emits the saved card, or null while it isn't on the chase list. */
     fun observeSavedCard(cardId: String): Flow<ChaseCardEntity?> = dao.observeCardById(cardId)
 
-    /** Searches the whole catalog, or only [setId] when given; a set with no query lists the set. */
-    suspend fun searchCards(query: String, setId: String? = null): List<Card> {
-        val sql = CardSearchQuery.build(query, setId) ?: return emptyList()
+    /** Rarities in the catalog with their card counts, most common first. */
+    val catalogRarities: Flow<List<NameCount>> = catalogDao.observeRarities()
+
+    /** Searches the catalog; with no words, lists everything matching [filters]. */
+    suspend fun searchCards(query: String, filters: SearchFilters = SearchFilters()): List<Card> {
+        val sql = CardSearchQuery.build(query, filters) ?: return emptyList()
         return catalogDao.search(CardSearchQuery.toSqliteQuery(sql)).map { it.toCard() }
     }
 
@@ -97,7 +102,9 @@ private fun CatalogCardWithSet.toCard() = Card(
     setSeries = setSeries,
     releaseDate = releaseDate,
     rarity = rarity,
-    artist = artist
+    artist = artist,
+    // Pokémon show their type; Trainer and Energy cards their category
+    typeLabel = types?.trim(',')?.split(',')?.firstOrNull()?.takeIf { supertype == "Pokémon" } ?: supertype
 )
 
 private fun ChaseCardEntity.toCard() = Card(

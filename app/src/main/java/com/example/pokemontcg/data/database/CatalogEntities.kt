@@ -14,7 +14,11 @@ data class CatalogCardEntity(
     val rarity: String?,
     val artist: String?,
     val imageSmall: String?,
-    val imageLarge: String?
+    val imageLarge: String?,
+    /** "Pokémon", "Trainer" or "Energy". */
+    val supertype: String? = null,
+    /** Pokémon types delimited on both sides, e.g. ",Fire,"; see `CardDataCleanup.types`. */
+    val types: String? = null
 )
 
 @Entity(tableName = "card_sets")
@@ -50,8 +54,13 @@ data class CatalogCardWithSet(
     val setId: String,
     val setName: String?,
     val setSeries: String?,
-    val releaseDate: String?
+    val releaseDate: String?,
+    val supertype: String?,
+    val types: String?
 )
+
+/** A value with how many catalog cards have it, e.g. a rarity for the rarity filter. */
+data class NameCount(val name: String, val count: Int)
 
 /** A set that has cards in the catalog, for the set picker. */
 data class CardSetWithCount(

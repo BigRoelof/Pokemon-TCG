@@ -17,7 +17,7 @@ interface CatalogDao {
 
     @Query(
         "SELECT c.id, c.name, c.number, c.rarity, c.artist, c.imageSmall, c.imageLarge, c.setId, " +
-            "s.name AS setName, s.series AS setSeries, s.releaseDate " +
+            "s.name AS setName, s.series AS setSeries, s.releaseDate, c.supertype, c.types " +
             "FROM catalog_cards c LEFT JOIN card_sets s ON s.id = c.setId WHERE c.id = :cardId"
     )
     suspend fun getCard(cardId: String): CatalogCardWithSet?
@@ -28,6 +28,12 @@ interface CatalogDao {
             "GROUP BY s.id ORDER BY s.releaseDate DESC, s.name"
     )
     fun observeSets(): Flow<List<CardSetWithCount>>
+
+    @Query(
+        "SELECT rarity AS name, COUNT(*) AS count FROM catalog_cards " +
+            "WHERE rarity IS NOT NULL GROUP BY rarity ORDER BY count DESC, rarity"
+    )
+    fun observeRarities(): Flow<List<NameCount>>
 
     @Query("SELECT COUNT(*) FROM catalog_cards")
     fun observeCardCount(): Flow<Int>
