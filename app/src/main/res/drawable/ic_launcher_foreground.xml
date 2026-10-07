@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 108dp adaptive icon canvas; the visible safe zone is the central 66dp circle -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Card fanned behind the ball -->
+    <path
+        android:fillColor="#FFCB05"
+        android:pathData="M60.5,26.2 L80.6,31.6 Q83.5,32.4 82.7,35.3 L72.6,72.9 Q71.8,75.8 68.9,75 L48.8,69.6 Q45.9,68.8 46.7,65.9 L56.8,28.3 Q57.6,25.4 60.5,26.2 Z" />
+    <!-- Ball: top half -->
+    <path
+        android:fillColor="#E3350D"
+        android:pathData="M28,56 A22,22 0,0 1,72 56 Z" />
+    <!-- Ball: bottom half -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,56 A22,22 0,0 0,72 56 Z" />
+    <!-- Ball: outline and band -->
+    <path
+        android:strokeColor="#1D2340"
+        android:strokeWidth="3.5"
+        android:fillColor="#00000000"
+        android:pathData="M28,56 A22,22 0,1 1,72 56 A22,22 0,1 1,28 56 Z M28,56 L72,56" />
+    <!-- Ball: button -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#1D2340"
+        android:strokeWidth="3.5"
+        android:pathData="M43,56 A7,7 0,1 1,57 56 A7,7 0,1 1,43 56 Z" />
+</vector>

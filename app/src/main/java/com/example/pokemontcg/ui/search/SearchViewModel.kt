@@ -8,8 +8,11 @@ import com.example.pokemontcg.ui.toUserMessage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed class SearchUiState {
@@ -28,6 +31,11 @@ class SearchViewModel(
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
+
+    /** Ids of cards already on the chase list, to tag them in the results. */
+    val savedCardIds: StateFlow<Set<String>> = repository.chaseCards
+        .map { cards -> cards.mapTo(HashSet()) { it.id } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     private var searchJob: Job? = null
 

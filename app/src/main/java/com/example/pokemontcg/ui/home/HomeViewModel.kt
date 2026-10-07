@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 enum class ChaseFilter(val label: String) {
     ALL("All"),
     CHASING("Chasing"),
-    OBTAINED("Obtained")
+    OBTAINED("Caught")
 }
 
 sealed class HomeUiState {

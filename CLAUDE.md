@@ -21,7 +21,7 @@ Single-module Android app (`:app`, package `com.example.pokemontcg`) for keeping
 
 To run instrumented tests without losing app data, install both APKs (`assembleDebug assembleDebugAndroidTest`, then `adb install -r` each) and run `adb shell am instrument -w -e class <TestClass> com.example.pokemontcg.test/androidx.test.runner.AndroidJUnitRunner`. If a physical phone is also connected, pass `-s emulator-5554` to adb (`run_app.sh` hangs with multiple devices). The Android SDK is expected at `~/Android/Sdk`. If every API call fails on the emulator with a connection error, check the emulator clock (`adb shell date`): a stale snapshot breaks TLS; cold boot with `-no-snapshot-load`.
 
-Toolchain is very recent (AGP 9.3, Gradle 9.6, Kotlin 2.2, KSP2). `gradle.properties` contains several compatibility flags (`android.builtInKotlin=false`, `android.newDsl=false`, etc.) that keep the classic `kotlin-android` plugin + `kotlinOptions` DSL working under AGP 9 — don't remove them without migrating the build scripts. Dependencies are declared inline in `app/build.gradle.kts` (no version catalog).
+Toolchain is very recent (AGP 9.3, Gradle 9.6, Kotlin 2.2, KSP2; compile/target SDK 36), but the Compose BOM is 2024.06, so newer Compose APIs (e.g. `Modifier.animateItem`) are unavailable. `gradle.properties` contains several compatibility flags (`android.builtInKotlin=false`, `android.newDsl=false`, etc.) that keep the classic `kotlin-android` plugin + `kotlinOptions` DSL working under AGP 9 — don't remove them without migrating the build scripts. Dependencies are declared inline in `app/build.gradle.kts` (no version catalog).
 
 ## Architecture
 
@@ -34,3 +34,12 @@ MVVM with a single repository and manual dependency injection:
 - Navigation routes: `home` (start) → `search` → `details/{cardId}`, defined in `Routes`.
 - Room schemas are exported to `app/schemas/` (commit them). Changing `ChaseCardEntity` requires a version bump plus a migration in `data/database/Migrations.kt` (steps documented there); `MigrationTest` (androidTest) verifies the oldest schema migrates to the current one.
 - `obtained` is toggled from Home (row checkbox) and Details (switch, only for saved cards). Home filtering and the progress counts live in the pure function `buildHomeState` (unit-tested).
+
+## Visual design
+
+Pokémon-branded look, fixed brand colors (no dynamic color) defined in `ui/theme/Color.kt`: Poké red header, ink navy band/text, yellow (`CaughtYellow`) reserved for "caught" state (progress fill, card borders, switch). Fonts are bundled in `res/font` (Lilita One for display/titles, Nunito for everything else; both OFL). User-facing copy says "caught" for the `obtained` flag.
+
+- Every screen's top bar is `ui/components/PokedexHeader`: red header drawn behind the status bar, ending in the ball's band. On Home the band is the progress bar and the ball's button slides to the caught fraction.
+- Cards are shown with `CardTile`/`CardImage` at the real card aspect ratio (63:88) in an adaptive `LazyVerticalGrid`.
+- Edge-to-edge: `MainActivity` calls `enableEdgeToEdge` with light status bar icons (always over red). Scaffold `innerPadding` goes into grid `contentPadding`; Search uses `contentWindowInsets = WindowInsets.safeDrawing` for the keyboard.
+- The window background in `res/values(-night)/themes.xml` matches the Compose background to avoid a flash on launch.
