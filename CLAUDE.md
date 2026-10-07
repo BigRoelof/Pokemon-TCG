@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Single-module Android app (`:app`, package `com.example.pokemontcg`) for tracking a personal Pokémon TCG collection, a "chase list" (wishlist) and binders. Card data comes from the open-source dataset https://github.com/PokemonTCG/pokemon-tcg-data, synced into a local Room catalog; search and details work offline. (The live Pokémon TCG API at api.pokemontcg.io is deprecated, shuts down for keys on 2027-03-01 and was failing most requests, so the app no longer uses it. Its paid successor is Scrydex.) Kotlin, Jetpack Compose + Material 3, Retrofit/Gson, Coil, Coroutines/StateFlow, KSP. The README is written in Dutch.
+**Pocketdex**: a single-module Android app (`:app`, Gradle project `Pocketdex`, package and applicationId `com.example.pokemontcg`; keep the applicationId, changing it installs a separate app without the user's data) for tracking a personal Pokémon TCG collection, a "chase list" (wishlist) and binders. Card data comes from the open-source dataset https://github.com/PokemonTCG/pokemon-tcg-data, synced into a local Room catalog; search and details work offline. (The live Pokémon TCG API at api.pokemontcg.io is deprecated, shuts down for keys on 2027-03-01 and was failing most requests, so the app no longer uses it. Its paid successor is Scrydex.) Kotlin, Jetpack Compose + Material 3, Retrofit/Gson, Coil, Coroutines/StateFlow, KSP. The README is written in Dutch.
 
 ## Commands
 
@@ -43,6 +43,7 @@ MVVM with a single repository and manual dependency injection:
 
 Pokémon-branded look, fixed brand colors (no dynamic color) defined in `ui/theme/Color.kt`: Poké red header, ink navy band/text, yellow (`CaughtYellow`) reserved for "caught" state (progress fill, card borders, switch). Fonts are bundled in `res/font` (Lilita One for display/titles, Nunito for everything else; both OFL). User-facing copy says "caught" for moving a chase-list card into the collection.
 
+- Short windows (phones in landscape, `isCompactHeight()` in `PokedexHeader.kt`): the header puts its content beside the title, list screens swap the bottom bar for `AppNavigationRail`, and the binder page puts its controls beside the page.
 - Every screen's top bar is `ui/components/PokedexHeader`: red header drawn behind the status bar, ending in the ball's band (optional `actions` for icon buttons; `HeaderSearchField` is the white search field used on it). On the list screens, with a set chosen, the band shows set completion and the ball's button slides to it.
 - Cards are shown with `CardTile`/`CardImage` at the real card aspect ratio (63:88) in an adaptive `LazyVerticalGrid`.
 - Edge-to-edge: `MainActivity` calls `enableEdgeToEdge` with light status bar icons (always over red). Scaffold `innerPadding` goes into grid `contentPadding`; Search uses `contentWindowInsets = WindowInsets.safeDrawing` for the keyboard.

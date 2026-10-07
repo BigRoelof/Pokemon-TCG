@@ -1,11 +1,27 @@
 package com.example.pokemontcg.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailDefaults
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -28,28 +44,10 @@ enum class TopLevelSection(val label: String) {
 fun AppBottomBar(selected: TopLevelSection, onSelect: (TopLevelSection) -> Unit) {
     NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
         TopLevelSection.entries.forEach { section ->
-            val isSelected = section == selected
             NavigationBarItem(
-                selected = isSelected,
+                selected = section == selected,
                 onClick = { onSelect(section) },
-                icon = {
-                    when (section) {
-                        TopLevelSection.COLLECTION -> CardStackIcon(
-                            color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        TopLevelSection.CHASE -> PokeBall(
-                            filled = isSelected,
-                            size = 22.dp,
-                            outlineColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        TopLevelSection.BINDERS -> BinderIcon(
-                            color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                            filled = isSelected
-                        )
-                    }
-                },
+                icon = { SectionIcon(section, selected = section == selected) },
                 label = { Text(section.label) },
                 colors = NavigationBarItemDefaults.colors(
                     indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -58,6 +56,55 @@ fun AppBottomBar(selected: TopLevelSection, onSelect: (TopLevelSection) -> Unit)
                 )
             )
         }
+    }
+}
+
+/** The bottom bar's sections as a side rail, for short windows (phones in landscape). */
+@Composable
+fun AppNavigationRail(selected: TopLevelSection, onSelect: (TopLevelSection) -> Unit) {
+    Column(modifier = Modifier.width(IntrinsicSize.Max)) {
+        // The red header continues over the status bar, which has light icons
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsTopHeight(WindowInsets.statusBars)
+                .background(MaterialTheme.colorScheme.primaryContainer)
+        )
+        SectionRail(selected, onSelect)
+    }
+}
+
+@Composable
+private fun SectionRail(selected: TopLevelSection, onSelect: (TopLevelSection) -> Unit) {
+    NavigationRail(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        windowInsets = NavigationRailDefaults.windowInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
+    ) {
+        Spacer(modifier = Modifier.weight(1f))
+        TopLevelSection.entries.forEach { section ->
+            NavigationRailItem(
+                selected = section == selected,
+                onClick = { onSelect(section) },
+                icon = { SectionIcon(section, selected = section == selected) },
+                label = { Text(section.label) },
+                colors = NavigationRailItemDefaults.colors(
+                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun SectionIcon(section: TopLevelSection, selected: Boolean) {
+    val color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    when (section) {
+        TopLevelSection.COLLECTION -> CardStackIcon(color = color)
+        TopLevelSection.CHASE -> PokeBall(filled = selected, size = 22.dp, outlineColor = MaterialTheme.colorScheme.onSurfaceVariant)
+        TopLevelSection.BINDERS -> BinderIcon(color = color, filled = selected)
     }
 }
 

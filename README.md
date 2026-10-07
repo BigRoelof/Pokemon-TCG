@@ -1,21 +1,31 @@
-# Pokémon TCG Chase List (Android)
+# Pocketdex (Android)
 
-Een moderne, native Android applicatie geschreven in Kotlin waarmee gebruikers hun persoonlijke Pokémon TCG "Chase List" kunnen bijhouden en beheren. 
+Pocketdex is een native Android app in Kotlin om je Pokémon TCG verzameling bij te houden: welke kaarten je hebt, op welke kaarten je nog jaagt (je *chase list*) en hoe je ze in je binders hebt gestoken.
 
-De app downloadt de kaartgegevens uit de open-source dataset [pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data) naar een lokale Room database. Zoeken en kaartdetails werken daardoor volledig offline; bij elke start worden alleen nieuwe of gewijzigde sets opgehaald. (De oude Pokémon TCG API is verouderd en wordt niet meer gebruikt.)
+De kaartgegevens komen uit de open-source dataset [pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data) en worden in een lokale Room database gezet. Zoeken en kaartdetails werken daardoor volledig offline; bij elke start worden alleen nieuwe of gewijzigde sets opgehaald. Prijzen (Cardmarket, in euro's) komen van [TCGdex](https://tcgdex.dev).
+
+---
+
+## 📱 Functionaliteit
+
+* **Collectie:** alle kaarten die je hebt, met totale waarde, sorteren (nieuwste, prijs, naam, set) en filteren op set. Kies je een set, dan zie je hoeveel van die set je compleet hebt.
+* **Chase list:** de kaarten die je nog zoekt. Tik op de bal om een kaart te *vangen*: hij verhuist naar je collectie (met Ongedaan maken).
+* **Binders:** maak zelf binders aan en vul ze met kaarten uit je collectie, op pagina's van 3 × 3 vakjes zoals een echte binder. Swipe door de pagina's, laat vakjes leeg voor kaarten die nog komen, en verplaats een kaart door hem lang in te drukken en op een ander vakje te tikken. Een kaart kan in meerdere binders zitten.
+* **Zoeken:** zoek offline in ruim 20.000 kaarten op naam, setnaam, setcode of nummer (bijv. `charizard 151` of `obf 125`), en filter op set, type en zeldzaamheid.
+* **Details:** grote kaartafbeelding, set-informatie, Cardmarket-prijs en knoppen om de kaart aan je collectie, chase list of binders toe te voegen.
 
 ---
 
 ## 🛠️ Technologie & Architectuur
 
 * **Taal:** Kotlin
-* **UI Framework:** Jetpack Compose & Material 3
-* **Architectuur:** MVVM (Model-View-ViewModel) + Feature-based package structuur
-* **Lokale Database:** Room Database (100% offline ondersteuning)
-* **Netwerk:** Retrofit + Gson (voor het synchroniseren van de kaartdataset)
-* **Afbeeldingen:** Coil (voor async afbeeldingen & caching)
+* **UI:** Jetpack Compose & Material 3, met een eigen Pokémon-stijl (vaste merkkleuren, Lilita One en Nunito)
+* **Architectuur:** MVVM met één repository en handmatige dependency injection (`AppContainer`)
+* **Lokale database:** Room (catalogus, collectie, chase list, binders en prijzencache)
+* **Netwerk:** Retrofit + Gson (dataset-synchronisatie en prijzen)
+* **Afbeeldingen:** Coil
 * **Asynchroon:** Kotlin Coroutines & Flow / StateFlow
-* **Build System:** Gradle Kotlin DSL (`.kts`) + KSP
+* **Build:** Gradle Kotlin DSL (`.kts`) + KSP
 
 ---
 
@@ -24,18 +34,26 @@ De app downloadt de kaartgegevens uit de open-source dataset [pokemon-tcg-data](
 ```text
 com.example.pokemontcg/
 ├── data/
-│   ├── api/          # Retrofit interface, endpoints & DTO models
-│   ├── database/     # Room Entity, DAO & Database instantie
-│   └── repository/   # PokemonRepository (unificatie van API & DB)
+│   ├── catalog/      # Synchronisatie van de kaartdataset (CatalogSync)
+│   ├── database/     # Room entities, DAO's, migraties
+│   ├── model/        # UI-modellen (Card, TrackedCard, sortering, binder-vakjes)
+│   ├── preferences/  # Opgeslagen voorkeuren (sortering)
+│   ├── prices/       # Cardmarket-prijzen via TCGdex
+│   └── repository/   # PokemonRepository: het enige toegangspunt tot de data
 ├── ui/
-│   ├── home/         # HomeScreen & HomeViewModel (weergave van je Chase List)
-│   ├── search/       # SearchScreen & SearchViewModel (live API zoekfunctie)
-│   ├── details/      # DetailsScreen & DetailsViewModel (kaartdetails & opslaan/verwijderen)
-│   ├── components/   # Herbruikbare UI onderdelen (PokemonCardRow, ErrorView, LoadingIndicator)
-│   └── theme/        # Material 3 kleurenschema's en typografie
-├── navigation/       # Navigation Compose routing (Home -> Search -> Details)
-└── MainActivity.kt   # App entry point & handmatige Dependency Injection
+│   ├── collection/   # Collectie-scherm
+│   ├── chase/        # Chase list-scherm (vangen + ongedaan maken)
+│   ├── binders/      # Binders-overzicht, binder-pagina's en kaartkiezer
+│   ├── lists/        # Gedeeld kaartrooster, sortering en set-voortgang
+│   ├── search/       # Zoeken met filters
+│   ├── details/      # Kaartdetails, prijs en acties
+│   ├── components/   # Herbruikbare onderdelen (Pokédex-header, kaarttegels, kiezers)
+│   └── theme/        # Kleuren, lettertypes en thema
+├── navigation/       # Navigation Compose routes
+└── MainActivity.kt   # Startpunt van de app
 ```
+
+Tests: `./gradlew testDebugUnitTest` (JVM) en `./gradlew connectedDebugAndroidTest` (op een toestel; let op: dit verwijdert daarna de app en zijn gegevens).
 
 ---
 
@@ -92,11 +110,3 @@ hw.gpu.enabled=yes
 hw.gpu.mode=host
 hw.ramSize=4096
 ```
-
----
-
-## 📱 Functionaliteit (MVP)
-
-* **Home:** Bekijk al je opgeslagen chase cards in een `LazyColumn`.
-* **Zoeken:** Zoek offline in ruim 20.000 kaarten op naam.
-* **Details:** Bekijk grote kaartafbeeldingen, set-informatie, nummering en voeg ze toe aan of verwijder ze uit je lokale lijst met één druk op de knop.

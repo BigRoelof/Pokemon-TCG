@@ -54,7 +54,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun PokemonTCGChaseListTheme(
+fun PocketdexTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
