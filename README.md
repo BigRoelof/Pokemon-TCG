@@ -2,7 +2,7 @@
 
 Een moderne, native Android applicatie geschreven in Kotlin waarmee gebruikers hun persoonlijke Pokémon TCG "Chase List" kunnen bijhouden en beheren. 
 
-De app maakt gebruik van de officiële [Pokémon TCG API](https://pokemontcg.io/) voor zoekopdrachten en slaat je persoonlijke wishlist offline op via een lokale Room database.
+De app downloadt de kaartgegevens uit de open-source dataset [pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data) naar een lokale Room database. Zoeken en kaartdetails werken daardoor volledig offline; bij elke start worden alleen nieuwe of gewijzigde sets opgehaald. (De oude Pokémon TCG API is verouderd en wordt niet meer gebruikt.)
 
 ---
 
@@ -12,7 +12,7 @@ De app maakt gebruik van de officiële [Pokémon TCG API](https://pokemontcg.io/
 * **UI Framework:** Jetpack Compose & Material 3
 * **Architectuur:** MVVM (Model-View-ViewModel) + Feature-based package structuur
 * **Lokale Database:** Room Database (100% offline ondersteuning)
-* **Netwerk:** Retrofit + Gson (voor API communicatie)
+* **Netwerk:** Retrofit + Gson (voor het synchroniseren van de kaartdataset)
 * **Afbeeldingen:** Coil (voor async afbeeldingen & caching)
 * **Asynchroon:** Kotlin Coroutines & Flow / StateFlow
 * **Build System:** Gradle Kotlin DSL (`.kts`) + KSP
@@ -98,5 +98,5 @@ hw.ramSize=4096
 ## 📱 Functionaliteit (MVP)
 
 * **Home:** Bekijk al je opgeslagen chase cards in een `LazyColumn`.
-* **Zoeken:** Zoek live naar kaarten via de Pokémon TCG API met automatische debouncing.
+* **Zoeken:** Zoek offline in ruim 20.000 kaarten op naam.
 * **Details:** Bekijk grote kaartafbeeldingen, set-informatie, nummering en voeg ze toe aan of verwijder ze uit je lokale lijst met één druk op de knop.

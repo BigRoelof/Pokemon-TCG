@@ -13,15 +13,18 @@ interface PokemonDao {
     @Query("SELECT * FROM chase_cards ORDER BY dateAdded DESC")
     fun getAllChaseCards(): Flow<List<ChaseCardEntity>>
 
-    @Query("SELECT EXISTS(SELECT 1 FROM chase_cards WHERE id = :cardId)")
-    fun isCardInChaseList(cardId: String): Flow<Boolean>
+    @Query("SELECT * FROM chase_cards WHERE id = :cardId")
+    suspend fun getCardById(cardId: String): ChaseCardEntity?
+
+    @Query("SELECT * FROM chase_cards WHERE id = :cardId")
+    fun observeCardById(cardId: String): Flow<ChaseCardEntity?>
+
+    @Query("UPDATE chase_cards SET obtained = :obtained WHERE id = :cardId")
+    suspend fun setObtained(cardId: String, obtained: Boolean)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCard(card: ChaseCardEntity)
 
     @Query("DELETE FROM chase_cards WHERE id = :cardId")
     suspend fun deleteCardById(cardId: String)
-
-    @Query("UPDATE chase_cards SET obtained = :obtained WHERE id = :cardId")
-    suspend fun updateCardObtainedStatus(cardId: String, obtained: Boolean)
 }
