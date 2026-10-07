@@ -83,7 +83,7 @@ fun SearchScreen(
     val query by viewModel.searchQuery.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val catalog by viewModel.catalogStatus.collectAsStateWithLifecycle()
-    val savedCardIds by viewModel.savedCardIds.collectAsStateWithLifecycle()
+    val trackedCards by viewModel.trackedCards.collectAsStateWithLifecycle()
     val sets by viewModel.sets.collectAsStateWithLifecycle()
     val selectedSet by viewModel.selectedSet.collectAsStateWithLifecycle()
     val selectedType by viewModel.selectedType.collectAsStateWithLifecycle()
@@ -201,7 +201,7 @@ fun SearchScreen(
                 SearchContent(
                     state = uiState,
                     cardCount = catalog.cardCount,
-                    savedCardIds = savedCardIds,
+                    trackedCards = trackedCards,
                     onCardClick = onNavigateToDetails,
                     bottomPadding = innerPadding.calculateBottomPadding()
                 )
@@ -214,7 +214,7 @@ fun SearchScreen(
 private fun SearchContent(
     state: SearchUiState,
     cardCount: Int,
-    savedCardIds: Set<String>,
+    trackedCards: Map<String, Boolean>,
     onCardClick: (String) -> Unit,
     bottomPadding: Dp
 ) {
@@ -257,7 +257,11 @@ private fun SearchContent(
                             number = card.number,
                             imageUrl = card.imageSmall,
                             onClick = { onCardClick(card.id) },
-                            onList = card.id in savedCardIds
+                            tag = when (trackedCards[card.id]) {
+                                true -> "In collection"
+                                false -> "On chase list"
+                                null -> null
+                            }
                         )
                     }
                 }

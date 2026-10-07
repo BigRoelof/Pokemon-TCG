@@ -70,6 +70,8 @@ fun PickerChip(
                 else Modifier.border(1.5.dp, outlineColor, shape)
             )
             .clickable(role = Role.Button, onClick = onOpen)
+            // Always bounded, so the label can shrink with weight() even inside a scrolling row
+            .widthIn(max = 300.dp)
             .heightIn(min = 36.dp)
             .padding(start = 14.dp, end = if (selectedLabel != null) 4.dp else 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -88,8 +90,7 @@ fun PickerChip(
                 color = selectedContent,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                // Not weight(): chips may sit in a horizontally scrolling row with unbounded width
-                modifier = Modifier.widthIn(max = 220.dp)
+                modifier = Modifier.weight(1f, fill = false)
             )
             Box(
                 modifier = Modifier

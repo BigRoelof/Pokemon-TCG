@@ -44,7 +44,14 @@ interface CollectionDao {
         return true
     }
 
-    /** Puts a collection card back on the chase list (e.g. undoing a catch). */
+    /** Undoes a catch exactly: the card leaves the collection and [original] returns to the chase list. */
+    @Transaction
+    suspend fun restoreChaseCard(original: ChaseCardEntity) {
+        delete(original.id)
+        insertChaseCard(original)
+    }
+
+    /** Puts a collection card back on the chase list. */
     @Transaction
     suspend fun moveToChaseList(cardId: String, now: Long): Boolean {
         val card = getById(cardId) ?: return false

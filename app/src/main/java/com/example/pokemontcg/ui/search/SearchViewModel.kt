@@ -91,10 +91,10 @@ class SearchViewModel(
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SearchUiState.Idle)
 
-    /** Ids of cards already on the chase list, to tag them in the results. */
-    val savedCardIds: StateFlow<Set<String>> = repository.chaseCards
-        .map { cards -> cards.mapTo(HashSet()) { it.id } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+    /** Where each tracked card is (true = in the collection), to tag search results. */
+    val trackedCards: StateFlow<Map<String, Boolean>> = repository.trackedCards
+        .map { cards -> cards.associate { it.id to it.owned } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     fun onQueryChanged(query: String) {
         _searchQuery.value = query

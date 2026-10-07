@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pokemontcg.data.database.CardPriceEntity
 import com.example.pokemontcg.data.model.Card
+import com.example.pokemontcg.data.model.TrackedCard
 import com.example.pokemontcg.data.repository.PokemonRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,11 +33,9 @@ class DetailsViewModel(
     private val _uiState = MutableStateFlow<DetailsUiState>(DetailsUiState.Loading)
     val uiState: StateFlow<DetailsUiState> = _uiState.asStateFlow()
 
-    private val _isSaved = MutableStateFlow(false)
-    val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
-
-    private val _isObtained = MutableStateFlow(false)
-    val isObtained: StateFlow<Boolean> = _isObtained.asStateFlow()
+    /** The card's place in the user's lists: in the collection (owned), on the chase list, or null. */
+    private val _tracked = MutableStateFlow<TrackedCard?>(null)
+    val tracked: StateFlow<TrackedCard?> = _tracked.asStateFlow()
 
     private val _price = MutableStateFlow(PriceUiState())
     val price: StateFlow<PriceUiState> = _price.asStateFlow()
@@ -51,10 +50,7 @@ class DetailsViewModel(
 
         savedStatusJob?.cancel()
         savedStatusJob = viewModelScope.launch {
-            repository.observeTrackedCard(cardId).collect { tracked ->
-                _isSaved.value = tracked != null
-                _isObtained.value = tracked?.owned == true
-            }
+            repository.observeTrackedCard(cardId).collect { _tracked.value = it }
         }
         viewModelScope.launch {
             _uiState.value = repository.getCard(cardId)?.let { DetailsUiState.Success(it) }
@@ -77,23 +73,18 @@ class DetailsViewModel(
         }
     }
 
-    fun toggleChaseList() {
-        val state = _uiState.value
-        if (state is DetailsUiState.Success) {
-            viewModelScope.launch {
-                if (_isSaved.value) {
-                    repository.removeCard(state.card.id)
-                } else {
-                    repository.addCardToChaseList(state.card)
-                }
-            }
-        }
-    }
+    fun addToCollection() = withCard { repository.addCardToCollection(it) }
 
-    fun setObtained(obtained: Boolean) {
-        val cardId = currentCardId ?: return
-        viewModelScope.launch {
-            repository.setOwned(cardId, obtained)
-        }
+    fun addToChaseList() = withCard { repository.addCardToChaseList(it) }
+
+    /** Moves the card from the chase list into the collection. */
+    fun catchCard() = withCard { repository.catchCard(it.id) }
+
+    /** Removes the card from whichever list it's on. */
+    fun removeCard() = withCard { repository.removeCard(it.id) }
+
+    private fun withCard(action: suspend (Card) -> Unit) {
+        val card = (_uiState.value as? DetailsUiState.Success)?.card ?: return
+        viewModelScope.launch { action(card) }
     }
 }

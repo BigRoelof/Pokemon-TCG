@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -28,8 +27,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -48,6 +45,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pokemontcg.data.model.Card
+import com.example.pokemontcg.data.model.TrackedCard
 import com.example.pokemontcg.ui.components.CardCornerShape
 import com.example.pokemontcg.ui.components.CardImage
 import com.example.pokemontcg.ui.components.LoadingIndicator
@@ -55,8 +53,6 @@ import com.example.pokemontcg.ui.components.MessageView
 import com.example.pokemontcg.ui.components.PokeBall
 import com.example.pokemontcg.ui.components.PokedexHeader
 import com.example.pokemontcg.ui.formatEuro
-import com.example.pokemontcg.ui.theme.CaughtYellow
-import com.example.pokemontcg.ui.theme.Ink
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -74,8 +70,7 @@ fun DetailsScreen(
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val isSaved by viewModel.isSaved.collectAsStateWithLifecycle()
-    val isObtained by viewModel.isObtained.collectAsStateWithLifecycle()
+    val tracked by viewModel.tracked.collectAsStateWithLifecycle()
     val price by viewModel.price.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -99,10 +94,13 @@ fun DetailsScreen(
             )
             is DetailsUiState.Success -> CardDetails(
                 card = state.card,
-                isSaved = isSaved,
-                isCaught = isObtained,
-                onToggleChaseList = viewModel::toggleChaseList,
-                onCaughtChange = viewModel::setObtained,
+                tracked = tracked,
+                actions = ListActions(
+                    addToCollection = viewModel::addToCollection,
+                    addToChaseList = viewModel::addToChaseList,
+                    catchCard = viewModel::catchCard,
+                    remove = viewModel::removeCard
+                ),
                 onSetClick = onNavigateToSet,
                 price = price,
                 onRetryPrice = viewModel::refreshPrice,
@@ -115,10 +113,8 @@ fun DetailsScreen(
 @Composable
 private fun CardDetails(
     card: Card,
-    isSaved: Boolean,
-    isCaught: Boolean,
-    onToggleChaseList: () -> Unit,
-    onCaughtChange: (Boolean) -> Unit,
+    tracked: TrackedCard?,
+    actions: ListActions,
     onSetClick: (String) -> Unit,
     price: PriceUiState,
     onRetryPrice: () -> Unit,
@@ -133,7 +129,7 @@ private fun CardDetails(
         CardImage(
             imageUrl = card.imageLarge ?: card.imageSmall,
             contentDescription = card.name,
-            caught = isSaved && isCaught,
+            caught = tracked?.owned == true,
             modifier = Modifier
                 .widthIn(max = 300.dp)
                 .fillMaxWidth(0.8f)
@@ -172,64 +168,66 @@ private fun CardDetails(
             modifier = Modifier.widthIn(max = 400.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            ListButtons(tracked = tracked, actions = actions)
             PriceSection(card = card, state = price, onRetry = onRetryPrice)
             CardFacts(card)
-            if (isSaved) {
-                CaughtToggle(caught = isCaught, onCaughtChange = onCaughtChange)
-                OutlinedButton(
-                    onClick = onToggleChaseList,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                ) {
-                    Text("Remove from chase list")
-                }
-            } else {
-                Button(onClick = onToggleChaseList, modifier = Modifier.fillMaxWidth()) {
-                    Text("Add to chase list")
-                }
+        }
+    }
+}
+
+/** What can be done with the card, depending on which list it's on. */
+private class ListActions(
+    val addToCollection: () -> Unit,
+    val addToChaseList: () -> Unit,
+    val catchCard: () -> Unit,
+    val remove: () -> Unit
+)
+
+@Composable
+private fun ListButtons(tracked: TrackedCard?, actions: ListActions) {
+    when {
+        tracked == null -> {
+            Button(onClick = actions.addToCollection, modifier = Modifier.fillMaxWidth()) {
+                Text("Add to collection")
             }
+            SecondaryButton("Add to chase list", actions.addToChaseList)
+        }
+        tracked.owned -> {
+            ListStatus(owned = true, text = "In your collection")
+            SecondaryButton("Remove from collection", actions.remove)
+        }
+        else -> {
+            ListStatus(owned = false, text = "On your chase list")
+            Button(onClick = actions.catchCard, modifier = Modifier.fillMaxWidth()) {
+                Text("Catch it: move to collection")
+            }
+            SecondaryButton("Remove from chase list", actions.remove)
         }
     }
 }
 
 @Composable
-private fun CaughtToggle(caught: Boolean, onCaughtChange: (Boolean) -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth()
+private fun ListStatus(owned: Boolean, text: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .toggleable(value = caught, role = Role.Switch, onValueChange = onCaughtChange)
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            PokeBall(filled = caught, size = 32.dp, outlineColor = MaterialTheme.colorScheme.outline)
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Caught",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "This card is in my collection",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = caught,
-                onCheckedChange = null,
-                colors = SwitchDefaults.colors(
-                    checkedTrackColor = CaughtYellow,
-                    checkedThumbColor = Ink,
-                    checkedBorderColor = CaughtYellow
-                )
-            )
-        }
+        PokeBall(filled = owned, size = 24.dp, outlineColor = MaterialTheme.colorScheme.outline)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun SecondaryButton(text: String, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+    ) {
+        Text(text)
     }
 }
 

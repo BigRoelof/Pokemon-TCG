@@ -40,10 +40,12 @@ class PokemonRepository(
 
     val collectionCards: Flow<List<CollectionCardEntity>> = collectionDao.observeAll()
 
+    val chaseList: Flow<List<TrackedCard>> = chaseCards.map { cards -> cards.map { it.toTracked() } }
+
+    val collection: Flow<List<TrackedCard>> = collectionCards.map { cards -> cards.map { it.toTracked() } }
+
     /** Both lists together: chase-list cards (not owned) and collection cards (owned). */
-    val trackedCards: Flow<List<TrackedCard>> = combine(chaseCards, collectionCards) { chase, owned ->
-        chase.map { it.toTracked() } + owned.map { it.toTracked() }
-    }
+    val trackedCards: Flow<List<TrackedCard>> = combine(chaseList, collection) { chase, owned -> chase + owned }
 
     val catalogSyncState: StateFlow<SyncState> = catalogSync.state
 
@@ -115,6 +117,17 @@ class PokemonRepository(
             )
         )
     }
+
+    /**
+     * Catches a chase-list card: it moves into the collection. Returns the chase-list entry as it
+     * was, for [undoCatch], or null if the card wasn't on the chase list.
+     */
+    suspend fun catchCard(cardId: String): ChaseCardEntity? {
+        val original = dao.getCardById(cardId) ?: return null
+        return original.takeIf { collectionDao.moveToCollection(cardId, System.currentTimeMillis()) }
+    }
+
+    suspend fun undoCatch(original: ChaseCardEntity) = collectionDao.restoreChaseCard(original)
 
     /** Catching moves a chase-list card into the collection; un-catching moves it back. */
     suspend fun setOwned(cardId: String, owned: Boolean) {
