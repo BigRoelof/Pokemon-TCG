@@ -5,12 +5,14 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [ChaseCardEntity::class], version = 1, exportSchema = false)
+@Database(entities = [ChaseCardEntity::class], version = 1, exportSchema = true)
 abstract class PokemonDatabase : RoomDatabase() {
 
     abstract fun pokemonDao(): PokemonDao
 
     companion object {
+        const val DATABASE_NAME = "pokemon_tcg_database"
+
         @Volatile
         private var INSTANCE: PokemonDatabase? = null
 
@@ -19,8 +21,10 @@ abstract class PokemonDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     PokemonDatabase::class.java,
-                    "pokemon_tcg_database"
-                ).build()
+                    DATABASE_NAME
+                )
+                    .addMigrations(*ALL_MIGRATIONS)
+                    .build()
                 INSTANCE = instance
                 instance
             }
