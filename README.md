@@ -6,6 +6,12 @@ De kaartgegevens komen uit de open-source dataset [pokemon-tcg-data](https://git
 
 ---
 
+## ⬇️ Downloaden
+
+Download de nieuwste `Pocketdex-<versie>.apk` bij [Releases](https://github.com/BigRoelof/Pokemon-TCG/releases) en open het bestand op je Android-telefoon (Android 7.0 of nieuwer). Sta zo nodig "Installeren uit onbekende bronnen" toe voor je browser of bestandsbeheer. Nieuwe versies installeer je gewoon over de oude heen; je collectie blijft bewaard.
+
+---
+
 ## 📱 Functionaliteit
 
 * **Collectie:** alle kaarten die je hebt, met totale waarde, sorteren (nieuwste, prijs, naam, set) en filteren op set. Kies je een set, dan zie je hoeveel van die set je compleet hebt.
