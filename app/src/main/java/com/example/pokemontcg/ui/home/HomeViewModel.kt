@@ -2,6 +2,7 @@ package com.example.pokemontcg.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.pokemontcg.data.database.CardPriceEntity
 import com.example.pokemontcg.data.database.CardSetWithCount
 import com.example.pokemontcg.data.database.ChaseCardEntity
 import com.example.pokemontcg.data.repository.PokemonRepository
@@ -34,7 +35,11 @@ sealed class HomeUiState {
          * [CardSetWithCount.id] holds the set name here; [CardSetWithCount.cardCount] is the
          * number of chase-list cards in that set.
          */
-        val sets: List<CardSetWithCount> = emptyList()
+        val sets: List<CardSetWithCount> = emptyList(),
+        /** Cardmarket prices (EUR) by card id, for the cards that have one. */
+        val prices: Map<String, Double> = emptyMap(),
+        /** Total price of the cards still to catch, within the chosen set. */
+        val valueToChase: Double = 0.0
     ) : HomeUiState()
     data class Error(val message: String) : HomeUiState()
 }
@@ -43,8 +48,10 @@ fun buildHomeState(
     cards: List<ChaseCardEntity>,
     filter: ChaseFilter,
     setName: String? = null,
-    catalogSets: List<CardSetWithCount> = emptyList()
+    catalogSets: List<CardSetWithCount> = emptyList(),
+    prices: Map<String, CardPriceEntity> = emptyMap()
 ): HomeUiState.Success {
+    val knownPrices = cards.mapNotNull { card -> prices[card.id]?.price?.let { card.id to it } }.toMap()
     // A set whose last card was removed no longer filters anything
     val activeSet = setName?.takeIf { name -> cards.any { it.setName == name } }
     val inSet = if (activeSet == null) cards else cards.filter { it.setName == activeSet }
@@ -58,7 +65,9 @@ fun buildHomeState(
         obtainedCount = inSet.count { it.obtained },
         totalCount = inSet.size,
         setName = activeSet,
-        sets = chaseListSets(cards, catalogSets)
+        sets = chaseListSets(cards, catalogSets),
+        prices = knownPrices,
+        valueToChase = inSet.filterNot { it.obtained }.sumOf { knownPrices[it.id] ?: 0.0 }
     )
 }
 
@@ -84,12 +93,17 @@ class HomeViewModel(private val repository: PokemonRepository) : ViewModel() {
     private val setName = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<HomeUiState> =
-        combine(repository.chaseCards, filter, setName, repository.catalogSets, ::buildHomeState)
+        combine(repository.chaseCards, filter, setName, repository.catalogSets, repository.prices, ::buildHomeState)
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5000),
                 initialValue = HomeUiState.Loading
             )
+
+    init {
+        // Prices are cached for a day; this only fetches missing or stale ones
+        viewModelScope.launch { repository.refreshChaseListPrices() }
+    }
 
     fun onFilterSelected(newFilter: ChaseFilter) {
         filter.value = newFilter

@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -30,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -51,6 +54,7 @@ import com.example.pokemontcg.ui.components.LoadingIndicator
 import com.example.pokemontcg.ui.components.MessageView
 import com.example.pokemontcg.ui.components.PokeBall
 import com.example.pokemontcg.ui.components.PokedexHeader
+import com.example.pokemontcg.ui.formatEuro
 import com.example.pokemontcg.ui.theme.CaughtYellow
 import com.example.pokemontcg.ui.theme.Ink
 import java.text.DateFormat
@@ -72,6 +76,7 @@ fun DetailsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isSaved by viewModel.isSaved.collectAsStateWithLifecycle()
     val isObtained by viewModel.isObtained.collectAsStateWithLifecycle()
+    val price by viewModel.price.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -99,6 +104,8 @@ fun DetailsScreen(
                 onToggleChaseList = viewModel::toggleChaseList,
                 onCaughtChange = viewModel::setObtained,
                 onSetClick = onNavigateToSet,
+                price = price,
+                onRetryPrice = viewModel::refreshPrice,
                 modifier = contentModifier
             )
         }
@@ -113,6 +120,8 @@ private fun CardDetails(
     onToggleChaseList: () -> Unit,
     onCaughtChange: (Boolean) -> Unit,
     onSetClick: (String) -> Unit,
+    price: PriceUiState,
+    onRetryPrice: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -163,6 +172,7 @@ private fun CardDetails(
             modifier = Modifier.widthIn(max = 400.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            PriceSection(card = card, state = price, onRetry = onRetryPrice)
             CardFacts(card)
             if (isSaved) {
                 CaughtToggle(caught = isCaught, onCaughtChange = onCaughtChange)
@@ -290,4 +300,91 @@ private fun SetLink(setName: String, onClick: () -> Unit) {
         )
     }
 }
+
+/** Cardmarket price in euros, with the last known price kept when offline. */
+@Composable
+private fun PriceSection(card: Card, state: PriceUiState, onRetry: () -> Unit) {
+    val uriHandler = LocalUriHandler.current
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Cardmarket price",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            val row = state.price
+            when {
+                row?.price != null -> {
+                    Text(
+                        text = formatEuro(row.price),
+                        style = MaterialTheme.typography.displaySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val extras = listOfNotNull(
+                        row.average30?.let { "30-day average ${formatEuro(it)}" },
+                        row.low?.let { "From ${formatEuro(it)}" }
+                    )
+                    if (extras.isNotEmpty()) {
+                        Text(
+                            text = extras.joinToString(", "),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Text(
+                        text = when {
+                            state.failed && row.sourceUpdated != null ->
+                                "Couldn't update. Price from ${formatPriceDate(row.sourceUpdated)}"
+                            row.sourceUpdated != null -> "Trend price, updated ${formatPriceDate(row.sourceUpdated)}"
+                            else -> "Trend price"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    val productId = row.cardmarketProductId
+                    if (productId != null) {
+                        TextButton(
+                            onClick = { uriHandler.openUri(cardmarketUrl(productId)) },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("View on Cardmarket")
+                        }
+                    }
+                }
+                row != null && !state.loading -> Text(
+                    text = "Cardmarket has no price for this card.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                state.failed -> {
+                    Text(
+                        text = "Couldn't load the price. Check your internet connection.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    TextButton(onClick = onRetry, contentPadding = PaddingValues(0.dp)) {
+                        Text("Try again")
+                    }
+                }
+                else -> Text(
+                    text = "Checking the price\u2026",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+private fun cardmarketUrl(productId: Int) = "https://www.cardmarket.com/en/Pokemon/Products?idProduct=$productId"
+
+/** `2026-10-07T09:52:36.679Z` -> `7 October 2026` in the user's locale. */
+private fun formatPriceDate(iso: String): String = runCatching {
+    val parsed = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(iso.take(10))!!
+    DateFormat.getDateInstance(DateFormat.LONG).format(parsed)
+}.getOrDefault(iso.take(10))
 

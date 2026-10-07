@@ -1,5 +1,6 @@
 package com.example.pokemontcg.ui.home
 
+import com.example.pokemontcg.data.database.CardPriceEntity
 import com.example.pokemontcg.data.database.CardSetWithCount
 import com.example.pokemontcg.data.database.ChaseCardEntity
 import org.junit.Assert.assertEquals
@@ -77,4 +78,20 @@ class BuildHomeStateTest {
         assertEquals(listOf(1, 1, 2), sets.map { it.cardCount })
         assertEquals("sym151", sets.first().symbolUrl)
     }
+
+    @Test
+    fun valueToChaseSumsKnownPricesOfCardsNotCaughtYet() {
+        val prices = mapOf(
+            "a" to price("a", 10.0), // caught: not counted
+            "b" to price("b", 2.5),
+            "d" to price("d", null) // no price on Cardmarket
+        )
+        val state = buildHomeState(mixed, ChaseFilter.ALL, prices = prices)
+        assertEquals(2.5, state.valueToChase, 0.0)
+        assertEquals(mapOf("a" to 10.0, "b" to 2.5), state.prices)
+        assertEquals(2.5, buildHomeState(mixed, ChaseFilter.ALL, setName = "Base", prices = prices).valueToChase, 0.0)
+        assertEquals(0.0, buildHomeState(mixed, ChaseFilter.ALL, setName = "151", prices = prices).valueToChase, 0.0)
+    }
+
+    private fun price(id: String, value: Double?) = CardPriceEntity(id, null, value, null, null, null, null, 0)
 }

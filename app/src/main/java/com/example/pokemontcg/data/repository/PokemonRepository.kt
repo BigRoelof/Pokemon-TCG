@@ -2,15 +2,20 @@ package com.example.pokemontcg.data.repository
 
 import com.example.pokemontcg.data.catalog.CatalogSync
 import com.example.pokemontcg.data.catalog.SyncState
+import com.example.pokemontcg.data.database.CardPriceEntity
 import com.example.pokemontcg.data.database.CardSearchQuery
 import com.example.pokemontcg.data.database.CardSetWithCount
 import com.example.pokemontcg.data.database.CatalogCardWithSet
 import com.example.pokemontcg.data.database.CatalogDao
 import com.example.pokemontcg.data.database.ChaseCardEntity
 import com.example.pokemontcg.data.database.PokemonDao
+import com.example.pokemontcg.data.database.PriceDao
 import com.example.pokemontcg.data.model.Card
+import com.example.pokemontcg.data.prices.PriceService
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 /**
  * Single access point for card data. Search and card details come from the local catalog
@@ -19,7 +24,9 @@ import kotlinx.coroutines.flow.StateFlow
 class PokemonRepository(
     private val dao: PokemonDao,
     private val catalogDao: CatalogDao,
-    private val catalogSync: CatalogSync
+    private val catalogSync: CatalogSync,
+    private val priceDao: PriceDao,
+    private val priceService: PriceService
 ) {
 
     val chaseCards: Flow<List<ChaseCardEntity>> = dao.getAllChaseCards()
@@ -32,6 +39,19 @@ class PokemonRepository(
     val catalogSets: Flow<List<CardSetWithCount>> = catalogDao.observeSets()
 
     fun syncCatalog() = catalogSync.sync()
+
+    /** Cached Cardmarket prices (EUR) by card id. */
+    val prices: Flow<Map<String, CardPriceEntity>> = priceDao.observeAll().map { rows -> rows.associateBy { it.cardId } }
+
+    fun observePrice(cardId: String): Flow<CardPriceEntity?> = priceDao.observe(cardId)
+
+    /** Fetches the card's price if it's missing or a day old; throws when offline. */
+    suspend fun refreshPrice(cardId: String) = priceService.refreshIfStale(cardId)
+
+    /** Refreshes stale prices for every card on the chase list; failures are skipped. */
+    suspend fun refreshChaseListPrices() {
+        priceService.refreshAllIfStale(dao.getAllChaseCards().first().map { it.id })
+    }
 
     /** Emits the saved card, or null while it isn't on the chase list. */
     fun observeSavedCard(cardId: String): Flow<ChaseCardEntity?> = dao.observeCardById(cardId)

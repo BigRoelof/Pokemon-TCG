@@ -41,6 +41,7 @@ import com.example.pokemontcg.ui.components.MessageView
 import com.example.pokemontcg.ui.components.PokedexHeader
 import com.example.pokemontcg.ui.components.SetChip
 import com.example.pokemontcg.ui.components.SetPickerSheet
+import com.example.pokemontcg.ui.formatEuro
 import com.example.pokemontcg.ui.theme.BallWhite
 
 @Composable
@@ -83,6 +84,13 @@ fun HomeScreen(
                         style = MaterialTheme.typography.titleMedium,
                         color = BallWhite
                     )
+                    if (success.valueToChase > 0) {
+                        Text(
+                            text = "${formatEuro(success.valueToChase)} still to chase on Cardmarket",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = BallWhite
+                        )
+                    }
                 }
             }
         },
@@ -193,6 +201,7 @@ private fun ChaseGrid(
                 onClick = { onCardClick(card.id) },
                 caught = card.obtained,
                 onCaughtChange = { caught -> onCaughtChange(card.id, caught) },
+                price = state.prices[card.id]?.let(::formatEuro),
                 modifier = Modifier.animateItem()
             )
         }

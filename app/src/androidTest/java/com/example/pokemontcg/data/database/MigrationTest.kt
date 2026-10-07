@@ -55,6 +55,16 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate3To4AddsThePriceCache() {
+        helper.createDatabase(testDb, 3).close()
+        helper.runMigrationsAndValidate(testDb, 4, true, *ALL_MIGRATIONS).use { db ->
+            db.query("SELECT COUNT(*) FROM card_prices").use { cursor ->
+                check(cursor.moveToFirst() && cursor.getInt(0) == 0) { "Price cache should start empty" }
+            }
+        }
+    }
+
     /** Creates the oldest schema and checks Room can migrate it to the current version. */
     @Test
     fun migrateAllFromFirstVersion() {

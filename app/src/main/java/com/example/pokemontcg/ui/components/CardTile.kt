@@ -82,7 +82,9 @@ fun CardTile(
     modifier: Modifier = Modifier,
     caught: Boolean = false,
     onCaughtChange: ((Boolean) -> Unit)? = null,
-    onList: Boolean = false
+    onList: Boolean = false,
+    /** Formatted price, shown next to the name. */
+    price: String? = null
 ) {
     Column(
         modifier = modifier
@@ -130,13 +132,25 @@ fun CardTile(
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = name,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        Row {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            if (price != null) {
+                Text(
+                    text = price,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    modifier = Modifier.padding(start = 6.dp)
+                )
+            }
+        }
         // The set name gives way to the number, which identifies the card
         Row {
             Text(

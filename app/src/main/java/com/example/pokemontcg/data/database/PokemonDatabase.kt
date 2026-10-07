@@ -9,14 +9,19 @@ import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [ChaseCardEntity::class, CatalogCardEntity::class, CardSetEntity::class, CatalogFileEntity::class],
-    version = 3,
+    entities = [
+        ChaseCardEntity::class, CatalogCardEntity::class, CardSetEntity::class, CatalogFileEntity::class,
+        CardPriceEntity::class
+    ],
+    version = 4,
     exportSchema = true,
     autoMigrations = [
         // 2: card catalog tables
         AutoMigration(from = 1, to = 2),
         // 3: set collector codes (card_sets.ptcgoCode)
-        AutoMigration(from = 2, to = 3, spec = Migration2To3::class)
+        AutoMigration(from = 2, to = 3, spec = Migration2To3::class),
+        // 4: Cardmarket price cache
+        AutoMigration(from = 3, to = 4)
     ]
 )
 abstract class PokemonDatabase : RoomDatabase() {
@@ -24,6 +29,8 @@ abstract class PokemonDatabase : RoomDatabase() {
     abstract fun pokemonDao(): PokemonDao
 
     abstract fun catalogDao(): CatalogDao
+
+    abstract fun priceDao(): PriceDao
 
     companion object {
         const val DATABASE_NAME = "pokemon_tcg_database"
