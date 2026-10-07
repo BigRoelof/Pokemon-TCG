@@ -11,10 +11,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [
         ChaseCardEntity::class, CatalogCardEntity::class, CardSetEntity::class, CatalogFileEntity::class,
-        CardPriceEntity::class, CollectionCardEntity::class
+        CardPriceEntity::class, CollectionCardEntity::class, BinderEntity::class, BinderCardEntity::class
     ],
-    // 6: collection_cards; caught chase cards moved there (manual MIGRATION_5_6)
-    version = 6,
+    version = 7,
     exportSchema = true,
     autoMigrations = [
         // 2: card catalog tables
@@ -24,7 +23,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         // 4: Cardmarket price cache
         AutoMigration(from = 3, to = 4),
         // 5: card supertype and types, rarities cleaned up
-        AutoMigration(from = 4, to = 5, spec = Migration4To5::class)
+        AutoMigration(from = 4, to = 5, spec = Migration4To5::class),
+        // 6: collection_cards; caught chase cards moved there (manual MIGRATION_5_6)
+        // 7: binders and the cards in their pockets
+        AutoMigration(from = 6, to = 7)
     ]
 )
 abstract class PokemonDatabase : RoomDatabase() {
@@ -36,6 +38,8 @@ abstract class PokemonDatabase : RoomDatabase() {
     abstract fun priceDao(): PriceDao
 
     abstract fun collectionDao(): CollectionDao
+
+    abstract fun binderDao(): BinderDao
 
     companion object {
         const val DATABASE_NAME = "pokemon_tcg_database"

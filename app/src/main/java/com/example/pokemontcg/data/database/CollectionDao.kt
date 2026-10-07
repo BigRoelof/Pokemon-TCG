@@ -7,7 +7,10 @@ import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
-/** The collection, plus moving cards between it and the chase list in one transaction. */
+/**
+ * The collection, plus moving cards between it and the chase list in one transaction.
+ * A card that leaves the collection also leaves every binder.
+ */
 @Dao
 interface CollectionDao {
 
@@ -25,6 +28,16 @@ interface CollectionDao {
 
     @Query("DELETE FROM collection_cards WHERE id = :cardId")
     suspend fun delete(cardId: String)
+
+    @Query("DELETE FROM binder_cards WHERE cardId = :cardId")
+    suspend fun deleteFromBinders(cardId: String)
+
+    /** Removes the card from the collection and from every binder. */
+    @Transaction
+    suspend fun removeFromCollection(cardId: String) {
+        delete(cardId)
+        deleteFromBinders(cardId)
+    }
 
     @Query("SELECT * FROM chase_cards WHERE id = :cardId")
     suspend fun getChaseCard(cardId: String): ChaseCardEntity?
@@ -47,7 +60,7 @@ interface CollectionDao {
     /** Undoes a catch exactly: the card leaves the collection and [original] returns to the chase list. */
     @Transaction
     suspend fun restoreChaseCard(original: ChaseCardEntity) {
-        delete(original.id)
+        removeFromCollection(original.id)
         insertChaseCard(original)
     }
 
@@ -56,7 +69,7 @@ interface CollectionDao {
     suspend fun moveToChaseList(cardId: String, now: Long): Boolean {
         val card = getById(cardId) ?: return false
         insertChaseCard(ChaseCardEntity(card.id, card.name, card.setName, card.number, card.imageUrl, card.largeImageUrl, dateAdded = now))
-        delete(cardId)
+        removeFromCollection(cardId)
         return true
     }
 }

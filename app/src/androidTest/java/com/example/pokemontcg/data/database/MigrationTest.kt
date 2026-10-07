@@ -102,6 +102,25 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate6To7AddsEmptyBindersAndKeepsTheCollection() {
+        helper.createDatabase(testDb, 6).apply {
+            execSQL(
+                "INSERT INTO collection_cards (id, name, setName, number, imageUrl, largeImageUrl, addedAt) " +
+                    "VALUES ('sv3-125', 'Charizard ex', 'Obsidian Flames', '125', 's', 'l', 1)"
+            )
+            close()
+        }
+        helper.runMigrationsAndValidate(testDb, 7, true, *ALL_MIGRATIONS).use { db ->
+            db.query("SELECT COUNT(*) FROM binders").use { cursor ->
+                check(cursor.moveToFirst() && cursor.getInt(0) == 0) { "Binders should start empty" }
+            }
+            db.query("SELECT COUNT(*) FROM collection_cards").use { cursor ->
+                check(cursor.moveToFirst() && cursor.getInt(0) == 1) { "Collection card lost during migration" }
+            }
+        }
+    }
+
     /** Creates the oldest schema and checks Room can migrate it to the current version. */
     @Test
     fun migrateAllFromFirstVersion() {

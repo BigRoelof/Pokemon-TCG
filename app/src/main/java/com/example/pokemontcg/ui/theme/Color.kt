@@ -20,3 +20,13 @@ val NightSurface = Color(0xFF1A1E2A)
 val NightRaised = Color(0xFF252A39)
 val NightText = Color(0xFFE8EAF2)
 val NightMuted = Color(0xFF9EA4B8)
+
+// Binder covers, picked by binder id
+val BinderCoverColors = listOf(
+    Ink,
+    PokeRedDark,
+    Color(0xFF2B5F8E),
+    Color(0xFF2F6B4A),
+    Color(0xFF5B3F8C),
+    Color(0xFF8A5A1E)
+)

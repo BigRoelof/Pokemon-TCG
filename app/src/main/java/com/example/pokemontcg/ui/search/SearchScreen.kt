@@ -21,35 +21,18 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -60,6 +43,7 @@ import com.example.pokemontcg.data.catalog.SyncState
 import com.example.pokemontcg.data.model.CardType
 import com.example.pokemontcg.ui.components.CardTile
 import com.example.pokemontcg.ui.components.ErrorView
+import com.example.pokemontcg.ui.components.HeaderSearchField
 import com.example.pokemontcg.ui.components.MessageView
 import com.example.pokemontcg.ui.components.OptionPickerSheet
 import com.example.pokemontcg.ui.components.PickerChip
@@ -68,9 +52,6 @@ import com.example.pokemontcg.ui.components.PokedexHeader
 import com.example.pokemontcg.ui.components.SetChip
 import com.example.pokemontcg.ui.components.SetPickerSheet
 import com.example.pokemontcg.ui.components.TypeDot
-import com.example.pokemontcg.ui.theme.BallWhite
-import com.example.pokemontcg.ui.theme.Ink
-import com.example.pokemontcg.ui.theme.SlateText
 import com.example.pokemontcg.ui.toUserMessage
 
 @Composable
@@ -134,8 +115,9 @@ fun SearchScreen(
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             PokedexHeader(title = "Find cards", onNavigateBack = onNavigateBack) {
-                SearchField(
+                HeaderSearchField(
                     query = query,
+                    placeholder = "Card name",
                     onQueryChange = viewModel::onQueryChanged,
                     autoFocus = !viewModel.openedForSet
                 )
@@ -311,56 +293,6 @@ private fun CatalogUpdateBanner(done: Int, total: Int) {
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-    )
-}
-
-@Composable
-private fun SearchField(query: String, onQueryChange: (String) -> Unit, autoFocus: Boolean) {
-    val focusRequester = remember { FocusRequester() }
-    val keyboard = LocalSoftwareKeyboardController.current
-    // Open the keyboard on first entry only, not when coming back from a card
-    var autoFocused by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        if (autoFocus && !autoFocused) {
-            focusRequester.requestFocus()
-            autoFocused = true
-        }
-    }
-
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = Modifier
-            .fillMaxWidth()
-            .focusRequester(focusRequester),
-        placeholder = { Text("Card name") },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Default.Clear, contentDescription = "Clear search")
-                }
-            }
-        },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
-        shape = RoundedCornerShape(50),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = BallWhite,
-            unfocusedContainerColor = BallWhite,
-            focusedTextColor = Ink,
-            unfocusedTextColor = Ink,
-            cursorColor = Ink,
-            focusedLeadingIconColor = Ink,
-            unfocusedLeadingIconColor = SlateText,
-            focusedTrailingIconColor = Ink,
-            unfocusedTrailingIconColor = SlateText,
-            focusedPlaceholderColor = SlateText,
-            unfocusedPlaceholderColor = SlateText,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent
-        )
     )
 }
 

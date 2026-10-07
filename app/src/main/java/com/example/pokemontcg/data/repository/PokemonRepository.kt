@@ -2,6 +2,9 @@ package com.example.pokemontcg.data.repository
 
 import com.example.pokemontcg.data.catalog.CatalogSync
 import com.example.pokemontcg.data.catalog.SyncState
+import com.example.pokemontcg.data.database.BinderDao
+import com.example.pokemontcg.data.database.BinderEntity
+import com.example.pokemontcg.data.database.BinderPocketCard
 import com.example.pokemontcg.data.database.CardPriceEntity
 import com.example.pokemontcg.data.database.CardSearchQuery
 import com.example.pokemontcg.data.database.CardSetWithCount
@@ -30,6 +33,7 @@ import kotlinx.coroutines.flow.map
 class PokemonRepository(
     private val dao: PokemonDao,
     private val collectionDao: CollectionDao,
+    private val binderDao: BinderDao,
     private val catalogDao: CatalogDao,
     private val catalogSync: CatalogSync,
     private val priceDao: PriceDao,
@@ -135,11 +139,44 @@ class PokemonRepository(
         if (owned) collectionDao.moveToCollection(cardId, now) else collectionDao.moveToChaseList(cardId, now)
     }
 
-    /** Removes the card from whichever list it's on. */
+    /** Removes the card from whichever list it's on (and from every binder). */
     suspend fun removeCard(cardId: String) {
         dao.deleteCardById(cardId)
-        collectionDao.delete(cardId)
+        collectionDao.removeFromCollection(cardId)
     }
+
+    /** Binders, oldest first. */
+    val binders: Flow<List<BinderEntity>> = binderDao.observeBinders()
+
+    /** The cards in every binder, by binder and pocket. */
+    val binderCards: Flow<List<BinderPocketCard>> = binderDao.observeAllPocketCards()
+
+    fun observeBinder(binderId: Long): Flow<BinderEntity?> = binderDao.observeBinder(binderId)
+
+    fun observeBinderCards(binderId: Long): Flow<List<BinderPocketCard>> = binderDao.observePocketCards(binderId)
+
+    /** Ids of the binders that hold the card. */
+    fun observeBinderIdsFor(cardId: String): Flow<List<Long>> = binderDao.observeBinderIdsFor(cardId)
+
+    /** Returns the new binder's id. */
+    suspend fun createBinder(name: String): Long =
+        binderDao.insertBinder(BinderEntity(name = name.trim(), createdAt = System.currentTimeMillis()))
+
+    suspend fun renameBinder(binderId: Long, name: String) = binderDao.renameBinder(binderId, name.trim())
+
+    suspend fun deleteBinder(binderId: Long) = binderDao.deleteBinder(binderId)
+
+    /** Fills the first empty pockets from [fromPocket] on; returns how many cards were added. */
+    suspend fun addCardsToBinder(binderId: Long, cardIds: List<String>, fromPocket: Int = 0): Int =
+        binderDao.addCards(binderId, cardIds, fromPocket, System.currentTimeMillis())
+
+    suspend fun removeCardFromBinder(binderId: Long, cardId: String) = binderDao.removeCard(binderId, cardId)
+
+    suspend fun moveCardInBinder(binderId: Long, cardId: String, toPocket: Int) =
+        binderDao.moveCard(binderId, cardId, toPocket)
+
+    /** Refills the binder's pockets from the first one in the given card order. */
+    suspend fun arrangeBinder(binderId: Long, orderedCardIds: List<String>) = binderDao.arrange(binderId, orderedCardIds)
 }
 
 private fun CatalogCardWithSet.toCard() = Card(
@@ -160,6 +197,8 @@ private fun CatalogCardWithSet.toCard() = Card(
 
 private fun ChaseCardEntity.toTracked() =
     TrackedCard(id, name, setName, number, imageUrl, largeImageUrl, addedAt = dateAdded, owned = false)
+
+fun BinderPocketCard.toTracked() = card.toTracked()
 
 private fun CollectionCardEntity.toTracked() =
     TrackedCard(id, name, setName, number, imageUrl, largeImageUrl, addedAt = addedAt, owned = true)

@@ -52,6 +52,7 @@ class AppContainer(context: Context) {
     val repository = PokemonRepository(
         dao = database.pokemonDao(),
         collectionDao = database.collectionDao(),
+        binderDao = database.binderDao(),
         catalogDao = database.catalogDao(),
         catalogSync = catalogSync,
         priceDao = database.priceDao(),

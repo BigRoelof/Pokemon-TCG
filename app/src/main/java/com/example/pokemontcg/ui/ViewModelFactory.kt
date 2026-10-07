@@ -6,6 +6,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.pokemontcg.data.preferences.UserPreferences
 import com.example.pokemontcg.data.repository.PokemonRepository
+import com.example.pokemontcg.ui.binders.BinderPickerViewModel
+import com.example.pokemontcg.ui.binders.BinderViewModel
+import com.example.pokemontcg.ui.binders.BindersViewModel
 import com.example.pokemontcg.ui.chase.ChaseListViewModel
 import com.example.pokemontcg.ui.collection.CollectionViewModel
 import com.example.pokemontcg.ui.details.DetailsViewModel
@@ -20,4 +23,7 @@ fun createViewModelFactory(
     initializer { ChaseListViewModel(repository, preferences) }
     initializer { SearchViewModel(repository, createSavedStateHandle()) }
     initializer { DetailsViewModel(repository) }
+    initializer { BindersViewModel(repository) }
+    initializer { BinderViewModel(repository, createSavedStateHandle()) }
+    initializer { BinderPickerViewModel(repository, createSavedStateHandle()) }
 }

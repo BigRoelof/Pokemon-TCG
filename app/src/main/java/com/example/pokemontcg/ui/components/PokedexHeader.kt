@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -52,6 +53,8 @@ fun PokedexHeader(
     modifier: Modifier = Modifier,
     onNavigateBack: (() -> Unit)? = null,
     progress: Float? = null,
+    /** Icon buttons at the end of the title row. */
+    actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit = {}
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -78,8 +81,11 @@ fun PokedexHeader(
                     color = BallWhite,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(vertical = 8.dp)
                 )
+                actions()
             }
             content()
         }

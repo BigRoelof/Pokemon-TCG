@@ -13,11 +13,12 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.pokemontcg.ui.components.AppBottomBar
 import com.example.pokemontcg.ui.components.PokedexHeader
 import com.example.pokemontcg.ui.components.TopLevelSection
 
-/** The frame shared by the top-level list screens: Pokédex header, bottom bar, "Add cards" button. */
+/** The frame shared by the top-level screens: Pokédex header, bottom bar, "Add cards" (or [addLabel]) button. */
 @Composable
 fun ListScreenScaffold(
     title: String,
@@ -26,6 +27,8 @@ fun ListScreenScaffold(
     onAddCards: () -> Unit,
     showAddButton: Boolean,
     progress: Float?,
+    addLabel: String = "Add cards",
+    addIcon: ImageVector = Icons.Default.Search,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     headerContent: @Composable ColumnScope.() -> Unit,
     content: @Composable (PaddingValues) -> Unit
@@ -38,8 +41,8 @@ fun ListScreenScaffold(
             if (showAddButton) {
                 ExtendedFloatingActionButton(
                     onClick = onAddCards,
-                    icon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    text = { Text("Add cards") },
+                    icon = { Icon(addIcon, contentDescription = null) },
+                    text = { Text(addLabel) },
                     containerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = MaterialTheme.colorScheme.onSecondary
                 )

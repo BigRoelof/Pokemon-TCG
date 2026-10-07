@@ -32,6 +32,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +49,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pokemontcg.data.model.Card
 import com.example.pokemontcg.data.model.TrackedCard
+import com.example.pokemontcg.ui.binders.BinderChoice
+import com.example.pokemontcg.ui.binders.BinderChoiceSheet
 import com.example.pokemontcg.ui.components.CardCornerShape
 import com.example.pokemontcg.ui.components.CardImage
 import com.example.pokemontcg.ui.components.LoadingIndicator
@@ -72,6 +77,19 @@ fun DetailsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val tracked by viewModel.tracked.collectAsStateWithLifecycle()
     val price by viewModel.price.collectAsStateWithLifecycle()
+    val binders by viewModel.binders.collectAsStateWithLifecycle()
+    var showBinderSheet by rememberSaveable { mutableStateOf(false) }
+
+    val loadedCard = (uiState as? DetailsUiState.Success)?.card
+    if (showBinderSheet && loadedCard != null && tracked?.owned == true) {
+        BinderChoiceSheet(
+            cardName = loadedCard.name,
+            binders = binders,
+            onToggle = viewModel::setInBinder,
+            onCreateBinder = viewModel::createBinderWithCard,
+            onDismiss = { showBinderSheet = false }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -101,6 +119,8 @@ fun DetailsScreen(
                     catchCard = viewModel::catchCard,
                     remove = viewModel::removeCard
                 ),
+                binders = binders,
+                onChooseBinders = { showBinderSheet = true },
                 onSetClick = onNavigateToSet,
                 price = price,
                 onRetryPrice = viewModel::refreshPrice,
@@ -115,6 +135,8 @@ private fun CardDetails(
     card: Card,
     tracked: TrackedCard?,
     actions: ListActions,
+    binders: List<BinderChoice>,
+    onChooseBinders: () -> Unit,
     onSetClick: (String) -> Unit,
     price: PriceUiState,
     onRetryPrice: () -> Unit,
@@ -169,6 +191,9 @@ private fun CardDetails(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             ListButtons(tracked = tracked, actions = actions)
+            if (tracked?.owned == true) {
+                BinderSection(binders = binders, onChoose = onChooseBinders)
+            }
             PriceSection(card = card, state = price, onRetry = onRetryPrice)
             CardFacts(card)
         }
@@ -228,6 +253,38 @@ private fun SecondaryButton(text: String, onClick: () -> Unit) {
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Text(text)
+    }
+}
+
+/** Which binders hold this collection card, with a button to change that. */
+@Composable
+private fun BinderSection(binders: List<BinderChoice>, onChoose: () -> Unit) {
+    val holding = binders.filter { it.holdsCard }
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Binders",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = if (holding.isEmpty()) "Not in a binder" else holding.joinToString(", ") { it.name },
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            TextButton(onClick = onChoose) {
+                Text(if (holding.isEmpty()) "Add to binder" else "Change")
+            }
+        }
     }
 }
 
