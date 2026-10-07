@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,6 +29,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -52,17 +56,21 @@ fun PokedexHeader(
     modifier: Modifier = Modifier,
     onNavigateBack: (() -> Unit)? = null,
     progress: Float? = null,
+    /** Icon buttons at the end of the title row. */
+    actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit = {}
 ) {
+    // Short windows (phones in landscape): the content goes beside the title to save height
+    val compact = isCompactHeight()
     Column(modifier = modifier.fillMaxWidth()) {
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.primaryContainer)
                 .statusBarsPadding()
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp)
+                .padding(start = 16.dp, end = 16.dp, top = if (compact) 0.dp else 8.dp, bottom = if (compact) 8.dp else 12.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            val backButton = @Composable {
                 if (onNavigateBack != null) {
                     IconButton(onClick = onNavigateBack, modifier = Modifier.offset(x = (-12).dp)) {
                         Icon(
@@ -72,20 +80,54 @@ fun PokedexHeader(
                         )
                     }
                 }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = BallWhite,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
             }
-            content()
+            val titleMaxWidth = maxWidth * 0.4f
+            if (compact) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    backButton()
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = BallWhite,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .widthIn(max = titleMaxWidth)
+                            .padding(end = 24.dp, top = 4.dp, bottom = 4.dp)
+                    )
+                    Column(modifier = Modifier.weight(1f)) { content() }
+                    actions()
+                }
+            } else {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        backButton()
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = BallWhite,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(vertical = 8.dp)
+                        )
+                        actions()
+                    }
+                    content()
+                }
+            }
         }
         BallBand(progress = progress)
     }
 }
+
+/** Whether the window is short (a phone in landscape): screens then save height where they can. */
+@Composable
+fun isCompactHeight(): Boolean =
+    with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height < CompactHeight.roundToPx() }
+
+private val CompactHeight = 480.dp
 
 @Composable
 private fun BallBand(progress: Float?) {

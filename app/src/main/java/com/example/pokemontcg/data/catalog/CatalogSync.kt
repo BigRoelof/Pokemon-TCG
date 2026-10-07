@@ -135,8 +135,10 @@ private fun CardJson.toEntity(setId: String) = CatalogCardEntity(
     setId = setId,
     name = name,
     number = number,
-    rarity = rarity,
+    rarity = CardDataCleanup.rarity(rarity),
     artist = artist,
     imageSmall = images?.small,
-    imageLarge = images?.large
+    imageLarge = images?.large,
+    supertype = supertype,
+    types = CardDataCleanup.types(types)
 )

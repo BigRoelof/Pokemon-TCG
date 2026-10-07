@@ -13,5 +13,7 @@ data class Card(
     val setSeries: String? = null,
     val releaseDate: String? = null,
     val rarity: String? = null,
-    val artist: String? = null
+    val artist: String? = null,
+    /** The card's Pokémon type, or "Trainer"/"Energy" for other cards. */
+    val typeLabel: String? = null
 )

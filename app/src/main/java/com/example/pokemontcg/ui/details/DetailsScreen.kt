@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,16 +27,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -45,14 +48,16 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pokemontcg.data.model.Card
+import com.example.pokemontcg.data.model.TrackedCard
+import com.example.pokemontcg.ui.binders.BinderChoice
+import com.example.pokemontcg.ui.binders.BinderChoiceSheet
 import com.example.pokemontcg.ui.components.CardCornerShape
 import com.example.pokemontcg.ui.components.CardImage
 import com.example.pokemontcg.ui.components.LoadingIndicator
 import com.example.pokemontcg.ui.components.MessageView
 import com.example.pokemontcg.ui.components.PokeBall
 import com.example.pokemontcg.ui.components.PokedexHeader
-import com.example.pokemontcg.ui.theme.CaughtYellow
-import com.example.pokemontcg.ui.theme.Ink
+import com.example.pokemontcg.ui.formatEuro
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -70,8 +75,21 @@ fun DetailsScreen(
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val isSaved by viewModel.isSaved.collectAsStateWithLifecycle()
-    val isObtained by viewModel.isObtained.collectAsStateWithLifecycle()
+    val tracked by viewModel.tracked.collectAsStateWithLifecycle()
+    val price by viewModel.price.collectAsStateWithLifecycle()
+    val binders by viewModel.binders.collectAsStateWithLifecycle()
+    var showBinderSheet by rememberSaveable { mutableStateOf(false) }
+
+    val loadedCard = (uiState as? DetailsUiState.Success)?.card
+    if (showBinderSheet && loadedCard != null && tracked?.owned == true) {
+        BinderChoiceSheet(
+            cardName = loadedCard.name,
+            binders = binders,
+            onToggle = viewModel::setInBinder,
+            onCreateBinder = viewModel::createBinderWithCard,
+            onDismiss = { showBinderSheet = false }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -94,11 +112,18 @@ fun DetailsScreen(
             )
             is DetailsUiState.Success -> CardDetails(
                 card = state.card,
-                isSaved = isSaved,
-                isCaught = isObtained,
-                onToggleChaseList = viewModel::toggleChaseList,
-                onCaughtChange = viewModel::setObtained,
+                tracked = tracked,
+                actions = ListActions(
+                    addToCollection = viewModel::addToCollection,
+                    addToChaseList = viewModel::addToChaseList,
+                    catchCard = viewModel::catchCard,
+                    remove = viewModel::removeCard
+                ),
+                binders = binders,
+                onChooseBinders = { showBinderSheet = true },
                 onSetClick = onNavigateToSet,
+                price = price,
+                onRetryPrice = viewModel::refreshPrice,
                 modifier = contentModifier
             )
         }
@@ -108,11 +133,13 @@ fun DetailsScreen(
 @Composable
 private fun CardDetails(
     card: Card,
-    isSaved: Boolean,
-    isCaught: Boolean,
-    onToggleChaseList: () -> Unit,
-    onCaughtChange: (Boolean) -> Unit,
+    tracked: TrackedCard?,
+    actions: ListActions,
+    binders: List<BinderChoice>,
+    onChooseBinders: () -> Unit,
     onSetClick: (String) -> Unit,
+    price: PriceUiState,
+    onRetryPrice: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -124,7 +151,7 @@ private fun CardDetails(
         CardImage(
             imageUrl = card.imageLarge ?: card.imageSmall,
             contentDescription = card.name,
-            caught = isSaved && isCaught,
+            caught = tracked?.owned == true,
             modifier = Modifier
                 .widthIn(max = 300.dp)
                 .fillMaxWidth(0.8f)
@@ -163,62 +190,100 @@ private fun CardDetails(
             modifier = Modifier.widthIn(max = 400.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            CardFacts(card)
-            if (isSaved) {
-                CaughtToggle(caught = isCaught, onCaughtChange = onCaughtChange)
-                OutlinedButton(
-                    onClick = onToggleChaseList,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                ) {
-                    Text("Remove from chase list")
-                }
-            } else {
-                Button(onClick = onToggleChaseList, modifier = Modifier.fillMaxWidth()) {
-                    Text("Add to chase list")
-                }
+            ListButtons(tracked = tracked, actions = actions)
+            if (tracked?.owned == true) {
+                BinderSection(binders = binders, onChoose = onChooseBinders)
             }
+            PriceSection(card = card, state = price, onRetry = onRetryPrice)
+            CardFacts(card)
+        }
+    }
+}
+
+/** What can be done with the card, depending on which list it's on. */
+private class ListActions(
+    val addToCollection: () -> Unit,
+    val addToChaseList: () -> Unit,
+    val catchCard: () -> Unit,
+    val remove: () -> Unit
+)
+
+@Composable
+private fun ListButtons(tracked: TrackedCard?, actions: ListActions) {
+    when {
+        tracked == null -> {
+            Button(onClick = actions.addToCollection, modifier = Modifier.fillMaxWidth()) {
+                Text("Add to collection")
+            }
+            SecondaryButton("Add to chase list", actions.addToChaseList)
+        }
+        tracked.owned -> {
+            ListStatus(owned = true, text = "In your collection")
+            SecondaryButton("Remove from collection", actions.remove)
+        }
+        else -> {
+            ListStatus(owned = false, text = "On your chase list")
+            Button(onClick = actions.catchCard, modifier = Modifier.fillMaxWidth()) {
+                Text("Catch it: move to collection")
+            }
+            SecondaryButton("Remove from chase list", actions.remove)
         }
     }
 }
 
 @Composable
-private fun CaughtToggle(caught: Boolean, onCaughtChange: (Boolean) -> Unit) {
+private fun ListStatus(owned: Boolean, text: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        PokeBall(filled = owned, size = 24.dp, outlineColor = MaterialTheme.colorScheme.outline)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun SecondaryButton(text: String, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+    ) {
+        Text(text)
+    }
+}
+
+/** Which binders hold this collection card, with a button to change that. */
+@Composable
+private fun BinderSection(binders: List<BinderChoice>, onChoose: () -> Unit) {
+    val holding = binders.filter { it.holdsCard }
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier
-                .toggleable(value = caught, role = Role.Switch, onValueChange = onCaughtChange)
-                .padding(16.dp),
+            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            PokeBall(filled = caught, size = 32.dp, outlineColor = MaterialTheme.colorScheme.outline)
-            Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Caught",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "This card is in my collection",
+                    text = "Binders",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-            Switch(
-                checked = caught,
-                onCheckedChange = null,
-                colors = SwitchDefaults.colors(
-                    checkedTrackColor = CaughtYellow,
-                    checkedThumbColor = Ink,
-                    checkedBorderColor = CaughtYellow
+                Text(
+                    text = if (holding.isEmpty()) "Not in a binder" else holding.joinToString(", ") { it.name },
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-            )
+            }
+            TextButton(onClick = onChoose) {
+                Text(if (holding.isEmpty()) "Add to binder" else "Change")
+            }
         }
     }
 }
@@ -227,6 +292,7 @@ private fun CaughtToggle(caught: Boolean, onCaughtChange: (Boolean) -> Unit) {
 @Composable
 private fun CardFacts(card: Card) {
     val facts = listOfNotNull(
+        card.typeLabel?.let { "Type" to it },
         card.rarity?.let { "Rarity" to it },
         card.artist?.let { "Illustrator" to it },
         card.setSeries?.let { "Series" to it },
@@ -290,4 +356,91 @@ private fun SetLink(setName: String, onClick: () -> Unit) {
         )
     }
 }
+
+/** Cardmarket price in euros, with the last known price kept when offline. */
+@Composable
+private fun PriceSection(card: Card, state: PriceUiState, onRetry: () -> Unit) {
+    val uriHandler = LocalUriHandler.current
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Cardmarket price",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            val row = state.price
+            when {
+                row?.price != null -> {
+                    Text(
+                        text = formatEuro(row.price),
+                        style = MaterialTheme.typography.displaySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val extras = listOfNotNull(
+                        row.average30?.let { "30-day average ${formatEuro(it)}" },
+                        row.low?.let { "From ${formatEuro(it)}" }
+                    )
+                    if (extras.isNotEmpty()) {
+                        Text(
+                            text = extras.joinToString(", "),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Text(
+                        text = when {
+                            state.failed && row.sourceUpdated != null ->
+                                "Couldn't update. Price from ${formatPriceDate(row.sourceUpdated)}"
+                            row.sourceUpdated != null -> "Trend price, updated ${formatPriceDate(row.sourceUpdated)}"
+                            else -> "Trend price"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    val productId = row.cardmarketProductId
+                    if (productId != null) {
+                        TextButton(
+                            onClick = { uriHandler.openUri(cardmarketUrl(productId)) },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("View on Cardmarket")
+                        }
+                    }
+                }
+                row != null && !state.loading -> Text(
+                    text = "Cardmarket has no price for this card.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                state.failed -> {
+                    Text(
+                        text = "Couldn't load the price. Check your internet connection.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    TextButton(onClick = onRetry, contentPadding = PaddingValues(0.dp)) {
+                        Text("Try again")
+                    }
+                }
+                else -> Text(
+                    text = "Checking the price\u2026",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+private fun cardmarketUrl(productId: Int) = "https://www.cardmarket.com/en/Pokemon/Products?idProduct=$productId"
+
+/** `2026-10-07T09:52:36.679Z` -> `7 October 2026` in the user's locale. */
+private fun formatPriceDate(iso: String): String = runCatching {
+    val parsed = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(iso.take(10))!!
+    DateFormat.getDateInstance(DateFormat.LONG).format(parsed)
+}.getOrDefault(iso.take(10))
 

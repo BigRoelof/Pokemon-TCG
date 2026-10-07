@@ -8,7 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.navigation.compose.rememberNavController
 import com.example.pokemontcg.navigation.AppNavigation
-import com.example.pokemontcg.ui.theme.PokemonTCGChaseListTheme
+import com.example.pokemontcg.ui.theme.PocketdexTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -20,7 +20,7 @@ class MainActivity : ComponentActivity() {
         val viewModelFactory = (application as PokemonTcgApplication).container.viewModelFactory
 
         setContent {
-            PokemonTCGChaseListTheme {
+            PocketdexTheme {
                 val navController = rememberNavController()
                 AppNavigation(
                     navController = navController,

@@ -1,27 +1,20 @@
 package com.example.pokemontcg.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -38,21 +31,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.pokemontcg.data.database.CardSetWithCount
-import com.example.pokemontcg.ui.theme.BallWhite
-import com.example.pokemontcg.ui.theme.Ink
 
-/**
- * "All sets", or the chosen set with a button to clear it. [onHeader] styles it for the red
- * header (Search); otherwise for the page background (Home).
- */
+/** "All sets", or the chosen set with its symbol and a button to clear it. */
 @Composable
 fun SetChip(
     selectedSet: CardSetWithCount?,
@@ -60,49 +45,15 @@ fun SetChip(
     onClear: () -> Unit,
     onHeader: Boolean = true
 ) {
-    val shape = RoundedCornerShape(50)
-    val outlineColor = if (onHeader) BallWhite else MaterialTheme.colorScheme.outline
-    val labelColor = if (onHeader) BallWhite else MaterialTheme.colorScheme.onSurfaceVariant
-    val selectedContainer = if (onHeader) BallWhite else MaterialTheme.colorScheme.secondary
-    val selectedContent = if (onHeader) Ink else MaterialTheme.colorScheme.onSecondary
-    Row(
-        modifier = Modifier
-            .clip(shape)
-            .then(
-                if (selectedSet != null) Modifier.background(selectedContainer, shape)
-                else Modifier.border(1.5.dp, outlineColor, shape)
-            )
-            .clickable(role = Role.Button, onClick = onOpenPicker)
-            .heightIn(min = 36.dp)
-            .padding(start = 14.dp, end = if (selectedSet != null) 4.dp else 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (selectedSet == null) {
-            Text("All sets", style = MaterialTheme.typography.labelLarge, color = labelColor)
-            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = labelColor)
-        } else {
-            SetSymbol(selectedSet.symbolUrl, size = 18)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = selectedSet.name,
-                style = MaterialTheme.typography.labelLarge,
-                color = selectedContent,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false)
-            )
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(shape)
-                    .clickable(role = Role.Button, onClick = onClear)
-                    .semantics { contentDescription = "Show all sets" },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Close, contentDescription = null, tint = selectedContent, modifier = Modifier.size(18.dp))
-            }
-        }
-    }
+    PickerChip(
+        placeholder = "All sets",
+        selectedLabel = selectedSet?.name,
+        onOpen = onOpenPicker,
+        onClear = onClear,
+        clearDescription = "Show all sets",
+        onHeader = onHeader,
+        leading = selectedSet?.let { set -> { SetSymbol(set.symbolUrl, size = 18) } }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -208,7 +159,7 @@ private fun SetRow(
 }
 
 @Composable
-private fun SetSymbol(url: String?, size: Int) {
+internal fun SetSymbol(url: String?, size: Int) {
     AsyncImage(model = url, contentDescription = null, modifier = Modifier.size(size.dp))
 }
 

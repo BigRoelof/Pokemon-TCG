@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PokemonTCGChaseList"
+rootProject.name = "Pocketdex"
 include(":app")

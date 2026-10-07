@@ -1,32 +1,49 @@
 package com.example.pokemontcg.data.database
 
 import androidx.sqlite.db.SimpleSQLiteQuery
+import com.example.pokemontcg.data.model.SearchFilters
 
 /**
  * Builds the catalog search. Every word must match the card name (anywhere), the start of a
  * word in the set name, the set code (e.g. `OBF`) or the card number; so "charizard 151",
- * "charizard obf" and "obf 125" all work. Optionally limited to one set.
+ * "charizard obf" and "obf 125" all work. [SearchFilters] narrow it to a set, type or rarity.
  */
 object CardSearchQuery {
 
+    /** Cap for searches with words. */
     const val MAX_RESULTS = 100
 
-    // Sets the full set list apart from a search: a whole set can be larger than MAX_RESULTS
-    private const val MAX_SET_RESULTS = 1000
+    /** Cap for browsing by filters alone, e.g. a whole set or every Fire card of a rarity. */
+    const val MAX_BROWSE_RESULTS = 1000
+
+    fun limitFor(input: String) = if (input.isBlank()) MAX_BROWSE_RESULTS else MAX_RESULTS
 
     data class Sql(val sql: String, val args: List<String>)
 
-    /** Returns null when there's nothing to search for (no words and no set). */
-    fun build(input: String, setId: String? = null): Sql? {
+    /** Returns null when there's nothing to search for (no words and no filters). */
+    fun build(input: String, filters: SearchFilters = SearchFilters()): Sql? {
         val words = input.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
-        if (words.isEmpty() && setId == null) return null
+        if (words.isEmpty() && filters.isEmpty) return null
         val phrase = words.joinToString(" ")
         val args = mutableListOf<String>()
         val conditions = mutableListOf<String>()
 
-        if (setId != null) {
+        filters.setId?.let { setId ->
             conditions += "c.setId = ?"
             args += setId
+        }
+        filters.type?.let { type ->
+            if (type.isSupertype) {
+                conditions += "c.supertype = ?"
+                args += type.label
+            } else {
+                conditions += "c.types LIKE ?"
+                args += "%,${type.label},%"
+            }
+        }
+        filters.rarity?.let { rarity ->
+            conditions += "c.rarity = ?"
+            args += rarity
         }
         words.forEach { word ->
             conditions += "(c.name LIKE ? ESCAPE '\\' OR (' ' || s.name) LIKE ? ESCAPE '\\' " +
@@ -49,11 +66,11 @@ object CardSearchQuery {
         order += "(CAST(c.number AS INTEGER) = 0) ASC, CAST(c.number AS INTEGER), c.number"
 
         val sql = "SELECT c.id, c.name, c.number, c.rarity, c.artist, c.imageSmall, c.imageLarge, c.setId, " +
-            "s.name AS setName, s.series AS setSeries, s.releaseDate " +
+            "s.name AS setName, s.series AS setSeries, s.releaseDate, c.supertype, c.types " +
             "FROM catalog_cards c LEFT JOIN card_sets s ON s.id = c.setId " +
             "WHERE ${conditions.joinToString(" AND ")} " +
             "ORDER BY ${order.joinToString(", ")} " +
-            "LIMIT ${if (words.isEmpty()) MAX_SET_RESULTS else MAX_RESULTS}"
+            "LIMIT ${limitFor(input)}"
         return Sql(sql, args)
     }
 

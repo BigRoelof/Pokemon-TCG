@@ -9,14 +9,24 @@ import androidx.room.migration.AutoMigrationSpec
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [ChaseCardEntity::class, CatalogCardEntity::class, CardSetEntity::class, CatalogFileEntity::class],
-    version = 3,
+    entities = [
+        ChaseCardEntity::class, CatalogCardEntity::class, CardSetEntity::class, CatalogFileEntity::class,
+        CardPriceEntity::class, CollectionCardEntity::class, BinderEntity::class, BinderCardEntity::class
+    ],
+    version = 7,
     exportSchema = true,
     autoMigrations = [
         // 2: card catalog tables
         AutoMigration(from = 1, to = 2),
         // 3: set collector codes (card_sets.ptcgoCode)
-        AutoMigration(from = 2, to = 3, spec = Migration2To3::class)
+        AutoMigration(from = 2, to = 3, spec = Migration2To3::class),
+        // 4: Cardmarket price cache
+        AutoMigration(from = 3, to = 4),
+        // 5: card supertype and types, rarities cleaned up
+        AutoMigration(from = 4, to = 5, spec = Migration4To5::class),
+        // 6: collection_cards; caught chase cards moved there (manual MIGRATION_5_6)
+        // 7: binders and the cards in their pockets
+        AutoMigration(from = 6, to = 7)
     ]
 )
 abstract class PokemonDatabase : RoomDatabase() {
@@ -24,6 +34,12 @@ abstract class PokemonDatabase : RoomDatabase() {
     abstract fun pokemonDao(): PokemonDao
 
     abstract fun catalogDao(): CatalogDao
+
+    abstract fun priceDao(): PriceDao
+
+    abstract fun collectionDao(): CollectionDao
+
+    abstract fun binderDao(): BinderDao
 
     companion object {
         const val DATABASE_NAME = "pokemon_tcg_database"
@@ -51,5 +67,12 @@ abstract class PokemonDatabase : RoomDatabase() {
 class Migration2To3 : AutoMigrationSpec {
     override fun onPostMigrate(db: SupportSQLiteDatabase) {
         db.execSQL("DELETE FROM catalog_files WHERE path = 'sets/en.json'")
+    }
+}
+
+/** Forgets every card file's hash, so the next sync downloads all cards again to fill the new columns. */
+class Migration4To5 : AutoMigrationSpec {
+    override fun onPostMigrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DELETE FROM catalog_files WHERE path LIKE 'cards/%'")
     }
 }

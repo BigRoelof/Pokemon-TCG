@@ -70,7 +70,7 @@ fun CardImage(
 
 /**
  * A card in a grid. With [onCaughtChange] the tile shows a ball button to mark the card as
- * caught; with [onList] it shows an "On your list" tag instead (used in search results).
+ * caught; [tag] shows a short label on the image instead (used in search results).
  */
 @Composable
 fun CardTile(
@@ -82,7 +82,9 @@ fun CardTile(
     modifier: Modifier = Modifier,
     caught: Boolean = false,
     onCaughtChange: ((Boolean) -> Unit)? = null,
-    onList: Boolean = false
+    tag: String? = null,
+    /** Formatted price, shown next to the name. */
+    price: String? = null
 ) {
     Column(
         modifier = modifier
@@ -116,9 +118,9 @@ fun CardTile(
                     }
                 }
             }
-            if (onList) {
+            if (tag != null) {
                 Text(
-                    text = "On your list",
+                    text = tag,
                     style = MaterialTheme.typography.labelSmall,
                     color = BallWhite,
                     modifier = Modifier
@@ -130,13 +132,25 @@ fun CardTile(
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = name,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        Row {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            if (price != null) {
+                Text(
+                    text = price,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    modifier = Modifier.padding(start = 6.dp)
+                )
+            }
+        }
         // The set name gives way to the number, which identifies the card
         Row {
             Text(
