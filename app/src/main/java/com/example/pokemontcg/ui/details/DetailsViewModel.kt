@@ -4,11 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pokemontcg.data.api.model.CardDto
 import com.example.pokemontcg.data.repository.PokemonRepository
+import com.example.pokemontcg.ui.toUserMessage
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed class DetailsUiState {
@@ -28,27 +28,42 @@ class DetailsViewModel(
     val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
 
     private var currentCardId: String? = null
+    private var savedStatusJob: Job? = null
+    private var loadJob: Job? = null
 
     fun loadCard(cardId: String) {
         if (currentCardId == cardId) return
         currentCardId = cardId
-        
-        viewModelScope.launch {
-            _uiState.value = DetailsUiState.Loading
-            
-            // Collect isSaved status
-            launch {
-                repository.isCardInChaseList(cardId).collect { saved ->
-                    _isSaved.value = saved
-                }
-            }
 
-            val result = repository.getCardDetails(cardId)
-            result.onSuccess { card ->
-                _uiState.value = DetailsUiState.Success(card)
-            }.onFailure { error ->
-                _uiState.value = DetailsUiState.Error(error.message ?: "Failed to load card")
+        savedStatusJob?.cancel()
+        savedStatusJob = viewModelScope.launch {
+            repository.isCardInChaseList(cardId).collect { saved ->
+                _isSaved.value = saved
             }
+        }
+        fetchCard(cardId)
+    }
+
+    fun retry() {
+        currentCardId?.let(::fetchCard)
+    }
+
+    private fun fetchCard(cardId: String) {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            // Show the locally saved copy right away so saved cards also work offline,
+            // then refresh it with the full data from the API.
+            val savedCard = repository.getSavedCard(cardId)
+            _uiState.value = savedCard?.let { DetailsUiState.Success(it) } ?: DetailsUiState.Loading
+
+            repository.getCardDetails(cardId)
+                .onSuccess { card ->
+                    _uiState.value = DetailsUiState.Success(card)
+                }.onFailure { error ->
+                    if (savedCard == null) {
+                        _uiState.value = DetailsUiState.Error(error.toUserMessage())
+                    }
+                }
         }
     }
 

@@ -4,10 +4,13 @@ import com.example.pokemontcg.data.api.PokemonApi
 import com.example.pokemontcg.data.api.model.CardDto
 import com.example.pokemontcg.data.database.ChaseCardEntity
 import com.example.pokemontcg.data.database.PokemonDao
+import com.example.pokemontcg.data.api.model.CardImages
+import com.example.pokemontcg.data.api.model.CardSet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
-import java.io.IOException
+import retrofit2.HttpException
 
 class PokemonRepository(
     private val api: PokemonApi,
@@ -20,27 +23,51 @@ class PokemonRepository(
 
     suspend fun searchCards(query: String): Result<List<CardDto>> {
         return withContext(Dispatchers.IO) {
-            try {
-                // Ensure query is formatted for API, e.g. name:charizard*
-                val searchQuery = if (query.contains(":")) query else "name:*$query*"
-                val response = api.searchCards(searchQuery)
-                Result.success(response.data)
-            } catch (e: Exception) {
-                // Catch network and serialization errors
-                Result.failure(e)
+            runCatchingWithRetry {
+                api.searchCards(buildSearchQuery(query)).data
             }
         }
     }
 
     suspend fun getCardDetails(cardId: String): Result<CardDto> {
         return withContext(Dispatchers.IO) {
-            try {
-                val response = api.getCardDetails(cardId)
-                Result.success(response.data)
-            } catch (e: Exception) {
-                Result.failure(e)
+            runCatchingWithRetry {
+                api.getCardDetails(cardId).data
             }
         }
+    }
+
+    /** Returns the locally saved copy of a card, so saved cards can be shown offline. */
+    suspend fun getSavedCard(cardId: String): CardDto? {
+        return withContext(Dispatchers.IO) {
+            dao.getCardById(cardId)?.let { entity ->
+                CardDto(
+                    id = entity.id,
+                    name = entity.name,
+                    number = entity.number,
+                    images = CardImages(small = entity.imageUrl, large = entity.largeImageUrl),
+                    set = CardSet(name = entity.setName)
+                )
+            }
+        }
+    }
+
+    /**
+     * The API is flaky and regularly answers valid requests with a 5xx, so server errors
+     * are retried a few times. Client errors and network failures are returned immediately.
+     */
+    private suspend fun <T> runCatchingWithRetry(block: suspend () -> T): Result<T> {
+        repeat(MAX_ATTEMPTS - 1) { attempt ->
+            try {
+                return Result.success(block())
+            } catch (e: HttpException) {
+                if (e.code() < 500) return Result.failure(e)
+                delay(RETRY_DELAY_MS * (attempt + 1))
+            } catch (e: Exception) {
+                return Result.failure(e)
+            }
+        }
+        return runCatching { block() }
     }
 
     suspend fun addCardToChaseList(card: CardDto) {
@@ -62,6 +89,23 @@ class PokemonRepository(
     suspend fun removeCardFromChaseList(cardId: String) {
         withContext(Dispatchers.IO) {
             dao.deleteCardById(cardId)
+        }
+    }
+
+    companion object {
+        private const val MAX_ATTEMPTS = 3
+        private const val RETRY_DELAY_MS = 500L
+
+        /**
+         * Plain text becomes a quoted prefix match on the card name, e.g. `name:"charizard ex*"`.
+         * Unquoted input containing spaces or punctuation is rejected by the API. Input that
+         * already contains `:` is treated as a raw API query.
+         */
+        fun buildSearchQuery(query: String): String {
+            val trimmed = query.trim()
+            if (trimmed.contains(":")) return trimmed
+            val escaped = trimmed.replace("\\", "\\\\").replace("\"", "\\\"")
+            return "name:\"$escaped*\""
         }
     }
 }

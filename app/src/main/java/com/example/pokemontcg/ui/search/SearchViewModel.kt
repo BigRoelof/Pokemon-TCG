@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pokemontcg.data.api.model.CardDto
 import com.example.pokemontcg.data.repository.PokemonRepository
+import com.example.pokemontcg.ui.toUserMessage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,14 @@ class SearchViewModel(
 
     fun onQueryChanged(query: String) {
         _searchQuery.value = query
+        search(query, debounceMs = 500)
+    }
+
+    fun retry() {
+        search(_searchQuery.value, debounceMs = 0)
+    }
+
+    private fun search(query: String, debounceMs: Long) {
         searchJob?.cancel()
         if (query.isBlank()) {
             _uiState.value = SearchUiState.Idle
@@ -39,13 +48,13 @@ class SearchViewModel(
         }
 
         searchJob = viewModelScope.launch {
-            delay(500) // debounce
+            delay(debounceMs)
             _uiState.value = SearchUiState.Loading
             val result = repository.searchCards(query)
             result.onSuccess { cards ->
                 _uiState.value = SearchUiState.Success(cards)
             }.onFailure { error ->
-                _uiState.value = SearchUiState.Error(error.message ?: "An error occurred")
+                _uiState.value = SearchUiState.Error(error.toUserMessage())
             }
         }
     }

@@ -70,7 +70,10 @@ fun SearchScreen(
                         LoadingIndicator()
                     }
                     is SearchUiState.Error -> {
-                        ErrorView(message = state.message)
+                        ErrorView(
+                            message = state.message,
+                            onRetry = viewModel::retry
+                        )
                     }
                     is SearchUiState.Success -> {
                         if (state.results.isEmpty()) {

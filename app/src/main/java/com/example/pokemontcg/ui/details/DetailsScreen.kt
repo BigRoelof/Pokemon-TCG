@@ -57,7 +57,7 @@ fun DetailsScreen(
                 is DetailsUiState.Error -> {
                     ErrorView(
                         message = state.message,
-                        onRetry = { viewModel.loadCard(cardId) }
+                        onRetry = viewModel::retry
                     )
                 }
                 is DetailsUiState.Success -> {

@@ -13,6 +13,9 @@ interface PokemonDao {
     @Query("SELECT * FROM chase_cards ORDER BY dateAdded DESC")
     fun getAllChaseCards(): Flow<List<ChaseCardEntity>>
 
+    @Query("SELECT * FROM chase_cards WHERE id = :cardId")
+    suspend fun getCardById(cardId: String): ChaseCardEntity?
+
     @Query("SELECT EXISTS(SELECT 1 FROM chase_cards WHERE id = :cardId)")
     fun isCardInChaseList(cardId: String): Flow<Boolean>
 
