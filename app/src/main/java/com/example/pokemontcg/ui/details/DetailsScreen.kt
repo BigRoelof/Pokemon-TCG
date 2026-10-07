@@ -1,6 +1,7 @@
 package com.example.pokemontcg.ui.details
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -16,8 +18,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -30,9 +35,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,6 +61,7 @@ import java.util.Locale
 fun DetailsScreen(
     cardId: String,
     onNavigateBack: () -> Unit,
+    onNavigateToSet: (String) -> Unit,
     factory: ViewModelProvider.Factory,
     viewModel: DetailsViewModel = viewModel(factory = factory)
 ) {
@@ -90,6 +98,7 @@ fun DetailsScreen(
                 isCaught = isObtained,
                 onToggleChaseList = viewModel::toggleChaseList,
                 onCaughtChange = viewModel::setObtained,
+                onSetClick = onNavigateToSet,
                 modifier = contentModifier
             )
         }
@@ -103,6 +112,7 @@ private fun CardDetails(
     isCaught: Boolean,
     onToggleChaseList: () -> Unit,
     onCaughtChange: (Boolean) -> Unit,
+    onSetClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -130,12 +140,17 @@ private fun CardDetails(
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = card.setName,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
-        )
+        val setId = card.setId
+        if (setId != null) {
+            SetLink(setName = card.setName, onClick = { onSetClick(setId) })
+        } else {
+            Text(
+                text = card.setName,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+        }
         Text(
             text = "Card #${card.number}",
             style = MaterialTheme.typography.bodyMedium,
@@ -248,3 +263,31 @@ private fun formatReleaseDate(date: String): String = runCatching {
     val parsed = SimpleDateFormat("yyyy/MM/dd", Locale.US).parse(date)!!
     DateFormat.getDateInstance(DateFormat.LONG).format(parsed)
 }.getOrDefault(date)
+
+/** The set name as a link to browse the whole set. */
+@Composable
+private fun SetLink(setName: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClickLabel = "Browse $setName", role = Role.Button, onClick = onClick)
+            .heightIn(min = 48.dp)
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = setName,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center,
+            textDecoration = TextDecoration.Underline,
+            modifier = Modifier.weight(1f, fill = false)
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+

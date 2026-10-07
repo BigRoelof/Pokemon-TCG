@@ -1,6 +1,7 @@
 package com.example.pokemontcg.ui
 
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.pokemontcg.data.repository.PokemonRepository
@@ -11,6 +12,6 @@ import com.example.pokemontcg.ui.search.SearchViewModel
 /** Creates every ViewModel in the app. Add an `initializer` here for each new ViewModel. */
 fun createViewModelFactory(repository: PokemonRepository): ViewModelProvider.Factory = viewModelFactory {
     initializer { HomeViewModel(repository) }
-    initializer { SearchViewModel(repository) }
+    initializer { SearchViewModel(repository, createSavedStateHandle()) }
     initializer { DetailsViewModel(repository) }
 }

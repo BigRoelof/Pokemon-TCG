@@ -1,6 +1,7 @@
 package com.example.pokemontcg.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.calculateEndPadding
@@ -23,6 +24,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -35,6 +39,8 @@ import com.example.pokemontcg.ui.components.ErrorView
 import com.example.pokemontcg.ui.components.LoadingIndicator
 import com.example.pokemontcg.ui.components.MessageView
 import com.example.pokemontcg.ui.components.PokedexHeader
+import com.example.pokemontcg.ui.components.SetChip
+import com.example.pokemontcg.ui.components.SetPickerSheet
 import com.example.pokemontcg.ui.theme.BallWhite
 
 @Composable
@@ -47,6 +53,22 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val success = uiState as? HomeUiState.Success
     val hasCards = success != null && success.totalCount > 0
+    var showSetPicker by rememberSaveable { mutableStateOf(false) }
+
+    if (showSetPicker && success != null) {
+        SetPickerSheet(
+            sets = success.sets,
+            selectedSetId = success.setName,
+            onSetSelected = { name ->
+                viewModel.onSetSelected(name)
+                showSetPicker = false
+            },
+            onDismiss = { showSetPicker = false },
+            title = "Show one set",
+            allSetsDetail = "Your whole chase list",
+            countLabel = { count -> if (count == 1) "1 card on your list" else "$count cards on your list" }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -56,7 +78,8 @@ fun HomeScreen(
             ) {
                 if (success != null && hasCards) {
                     Text(
-                        text = "${success.obtainedCount} of ${success.totalCount} caught",
+                        text = "${success.obtainedCount} of ${success.totalCount} caught" +
+                            (success.setName?.let { " in $it" } ?: ""),
                         style = MaterialTheme.typography.titleMedium,
                         color = BallWhite
                     )
@@ -96,6 +119,8 @@ fun HomeScreen(
                         state = state,
                         innerPadding = innerPadding,
                         onFilterSelected = viewModel::onFilterSelected,
+                        onOpenSetPicker = { showSetPicker = true },
+                        onClearSet = { viewModel.onSetSelected(null) },
                         onCardClick = onNavigateToDetails,
                         onCaughtChange = viewModel::setObtained
                     )
@@ -110,6 +135,8 @@ private fun ChaseGrid(
     state: HomeUiState.Success,
     innerPadding: PaddingValues,
     onFilterSelected: (ChaseFilter) -> Unit,
+    onOpenSetPicker: () -> Unit,
+    onClearSet: () -> Unit,
     onCardClick: (String) -> Unit,
     onCaughtChange: (String, Boolean) -> Unit
 ) {
@@ -128,6 +155,19 @@ private fun ChaseGrid(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize()
     ) {
+        // Only worth offering once the list spans more than one set
+        if (state.sets.size > 1 || state.setName != null) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Box(modifier = Modifier.padding(horizontal = 4.dp)) {
+                    SetChip(
+                        selectedSet = state.sets.firstOrNull { it.name == state.setName },
+                        onOpenPicker = onOpenSetPicker,
+                        onClear = onClearSet,
+                        onHeader = false
+                    )
+                }
+            }
+        }
         item(span = { GridItemSpan(maxLineSpan) }) {
             FilterRow(selected = state.filter, onFilterSelected = onFilterSelected)
         }

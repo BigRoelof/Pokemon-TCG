@@ -8,6 +8,8 @@ data class Card(
     val setName: String,
     val imageSmall: String?,
     val imageLarge: String?,
+    /** Catalog set id; null for a saved card the catalog doesn't know. */
+    val setId: String? = null,
     val setSeries: String? = null,
     val releaseDate: String? = null,
     val rarity: String? = null,

@@ -16,11 +16,18 @@ interface CatalogDao {
     suspend fun search(query: SupportSQLiteQuery): List<CatalogCardWithSet>
 
     @Query(
-        "SELECT c.id, c.name, c.number, c.rarity, c.artist, c.imageSmall, c.imageLarge, " +
+        "SELECT c.id, c.name, c.number, c.rarity, c.artist, c.imageSmall, c.imageLarge, c.setId, " +
             "s.name AS setName, s.series AS setSeries, s.releaseDate " +
             "FROM catalog_cards c LEFT JOIN card_sets s ON s.id = c.setId WHERE c.id = :cardId"
     )
     suspend fun getCard(cardId: String): CatalogCardWithSet?
+
+    @Query(
+        "SELECT s.id, s.name, s.series, s.releaseDate, s.symbolUrl, s.ptcgoCode, COUNT(c.id) AS cardCount " +
+            "FROM card_sets s JOIN catalog_cards c ON c.setId = s.id " +
+            "GROUP BY s.id ORDER BY s.releaseDate DESC, s.name"
+    )
+    fun observeSets(): Flow<List<CardSetWithCount>>
 
     @Query("SELECT COUNT(*) FROM catalog_cards")
     fun observeCardCount(): Flow<Int>

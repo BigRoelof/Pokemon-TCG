@@ -26,7 +26,9 @@ data class CardSetEntity(
     val releaseDate: String?,
     val total: Int?,
     val logoUrl: String?,
-    val symbolUrl: String?
+    val symbolUrl: String?,
+    /** Collector code such as `OBF`; missing for some older and promo sets. */
+    val ptcgoCode: String? = null
 )
 
 /** Content hash of each downloaded dataset file, so unchanged files aren't downloaded again. */
@@ -45,7 +47,19 @@ data class CatalogCardWithSet(
     val artist: String?,
     val imageSmall: String?,
     val imageLarge: String?,
+    val setId: String,
     val setName: String?,
     val setSeries: String?,
     val releaseDate: String?
+)
+
+/** A set that has cards in the catalog, for the set picker. */
+data class CardSetWithCount(
+    val id: String,
+    val name: String,
+    val series: String?,
+    val releaseDate: String?,
+    val symbolUrl: String?,
+    val ptcgoCode: String?,
+    val cardCount: Int
 )

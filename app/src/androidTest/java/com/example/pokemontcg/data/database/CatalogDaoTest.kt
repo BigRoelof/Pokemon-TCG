@@ -3,6 +3,7 @@ package com.example.pokemontcg.data.database
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -26,8 +27,9 @@ class CatalogDaoTest {
         dao = db.catalogDao()
         dao.upsertSets(
             listOf(
-                CardSetEntity("base1", "Base", "Base", "1999/01/09", 102, null, null),
-                CardSetEntity("sv3", "Obsidian Flames", "Scarlet & Violet", "2023/08/11", 230, null, null)
+                CardSetEntity("base1", "Base", "Base", "1999/01/09", 102, null, null, "BS"),
+                CardSetEntity("sv3", "Obsidian Flames", "Scarlet & Violet", "2023/08/11", 230, null, null, "OBF"),
+                CardSetEntity("ex1", "Expedition Base Set", "E-Card", "2002/09/15", 165, null, null, "EX")
             )
         )
         dao.upsertCards(
@@ -36,7 +38,10 @@ class CatalogDaoTest {
                 card("sv3-125", "sv3", "Charizard ex"),
                 card("sv3-199", "sv3", "Dark Charizard ex"),
                 card("base1-31", "base1", "Mr. Mime"),
-                card("sv3-1", "sv3", "Pikachu_100%")
+                card("sv3-1", "sv3", "Pikachu_100%"),
+                card("sv3-GG01", "sv3", "Charmander"),
+                card("sv3-10", "sv3", "Charmeleon"),
+                card("ex1-40", "ex1", "Charizard")
             )
         )
     }
@@ -47,13 +52,51 @@ class CatalogDaoTest {
     private fun card(id: String, setId: String, name: String) =
         CatalogCardEntity(id, setId, name, id.substringAfter('-'), null, null, null, null)
 
-    private fun search(input: String) = runBlocking {
-        dao.search(CardSearchQuery.toSqliteQuery(CardSearchQuery.build(input)!!)).map { it.id }
+    private fun search(input: String, setId: String? = null) = runBlocking {
+        dao.search(CardSearchQuery.toSqliteQuery(CardSearchQuery.build(input, setId)!!)).map { it.id }
     }
 
     @Test
     fun exactNameFirstThenPrefixThenNewestSet() {
-        assertEquals(listOf("base1-4", "sv3-125", "sv3-199"), search("charizard"))
+        assertEquals(listOf("ex1-40", "base1-4", "sv3-125", "sv3-199"), search("charizard"))
+    }
+
+    @Test
+    fun wordsCanNameTheSetByNameOrCode() {
+        assertEquals(listOf("sv3-125", "sv3-199"), search("charizard obsidian"))
+        assertEquals(listOf("sv3-125", "sv3-199"), search("charizard OBF"))
+        assertEquals(listOf("base1-4"), search("charizard bs"))
+    }
+
+    @Test
+    fun setNameWordsDoNotOutrankCardNames() {
+        // "ex" also starts "Expedition", but cards named "... ex" come first
+        assertEquals(listOf("sv3-125", "sv3-199", "ex1-40"), search("charizard ex"))
+    }
+
+    @Test
+    fun setCodeAndNumberFindOneCard() {
+        assertEquals(listOf("sv3-125"), search("obf 125"))
+    }
+
+    @Test
+    fun setFilterLimitsResults() {
+        assertEquals(listOf("sv3-125", "sv3-199"), search("charizard", setId = "sv3"))
+    }
+
+    @Test
+    fun wholeSetIsListedInCardNumberOrder() {
+        assertEquals(
+            listOf("sv3-1", "sv3-10", "sv3-125", "sv3-199", "sv3-GG01"),
+            search("", setId = "sv3")
+        )
+    }
+
+    @Test
+    fun setsWithCardsAreListedNewestFirst() = runBlocking {
+        val sets = dao.observeSets().first()
+        assertEquals(listOf("sv3", "ex1", "base1"), sets.map { it.id })
+        assertEquals(5, sets.first().cardCount)
     }
 
     @Test
@@ -78,7 +121,7 @@ class CatalogDaoTest {
     @Test
     fun replacingASetsCardsRecordsTheFileHash() = runBlocking {
         dao.replaceSetCards("base1", listOf(card("base1-4", "base1", "Charizard")), CatalogFileEntity("cards/en/base1.json", "abc"))
-        assertEquals(listOf("base1-4"), search("charizard").filter { it.startsWith("base1") })
+        assertEquals(listOf("base1-4"), search("charizard", setId = "base1"))
         assertEquals(emptyList<String>(), search("mime"))
         assertEquals(listOf(CatalogFileEntity("cards/en/base1.json", "abc")), dao.getFiles())
     }

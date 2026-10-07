@@ -126,7 +126,8 @@ private fun SetJson.toEntity() = CardSetEntity(
     releaseDate = releaseDate,
     total = total,
     logoUrl = images?.logo,
-    symbolUrl = images?.symbol
+    symbolUrl = images?.symbol,
+    ptcgoCode = ptcgoCode
 )
 
 private fun CardJson.toEntity(setId: String) = CatalogCardEntity(

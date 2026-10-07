@@ -36,6 +36,25 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun migrate2To3AddsSetCodesAndRefetchesTheSetsFile() {
+        helper.createDatabase(testDb, 2).apply {
+            execSQL("INSERT INTO card_sets (id, name, series, releaseDate, total, logoUrl, symbolUrl) VALUES ('sv3', 'Obsidian Flames', 'Scarlet & Violet', '2023/08/11', 230, NULL, NULL)")
+            execSQL("INSERT INTO catalog_files (path, sha) VALUES ('sets/en.json', 'abc'), ('cards/en/sv3.json', 'def')")
+            close()
+        }
+        helper.runMigrationsAndValidate(testDb, 3, true, *ALL_MIGRATIONS).use { db ->
+            db.query("SELECT path FROM catalog_files").use { cursor ->
+                check(cursor.count == 1 && cursor.moveToFirst() && cursor.getString(0) == "cards/en/sv3.json") {
+                    "Only the sets file should be marked for download again"
+                }
+            }
+            db.query("SELECT name FROM card_sets WHERE id = 'sv3'").use { cursor ->
+                check(cursor.moveToFirst()) { "Set lost during migration" }
+            }
+        }
+    }
+
     /** Creates the oldest schema and checks Room can migrate it to the current version. */
     @Test
     fun migrateAllFromFirstVersion() {

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -57,6 +58,8 @@ import com.example.pokemontcg.ui.components.CardTile
 import com.example.pokemontcg.ui.components.ErrorView
 import com.example.pokemontcg.ui.components.MessageView
 import com.example.pokemontcg.ui.components.PokedexHeader
+import com.example.pokemontcg.ui.components.SetChip
+import com.example.pokemontcg.ui.components.SetPickerSheet
 import com.example.pokemontcg.ui.theme.BallWhite
 import com.example.pokemontcg.ui.theme.Ink
 import com.example.pokemontcg.ui.theme.SlateText
@@ -73,13 +76,40 @@ fun SearchScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val catalog by viewModel.catalogStatus.collectAsStateWithLifecycle()
     val savedCardIds by viewModel.savedCardIds.collectAsStateWithLifecycle()
+    val sets by viewModel.sets.collectAsStateWithLifecycle()
+    val selectedSet by viewModel.selectedSet.collectAsStateWithLifecycle()
+    var showSetPicker by rememberSaveable { mutableStateOf(false) }
+
+    if (showSetPicker) {
+        SetPickerSheet(
+            sets = sets,
+            selectedSetId = selectedSet?.id,
+            onSetSelected = { setId ->
+                viewModel.onSetSelected(setId)
+                showSetPicker = false
+            },
+            onDismiss = { showSetPicker = false }
+        )
+    }
 
     Scaffold(
         // safeDrawing includes the keyboard, so results stay scrollable above it
         contentWindowInsets = WindowInsets.safeDrawing,
         topBar = {
             PokedexHeader(title = "Find cards", onNavigateBack = onNavigateBack) {
-                SearchField(query = query, onQueryChange = viewModel::onQueryChanged)
+                SearchField(
+                    query = query,
+                    onQueryChange = viewModel::onQueryChanged,
+                    autoFocus = !viewModel.openedForSet
+                )
+                if (sets.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SetChip(
+                        selectedSet = selectedSet,
+                        onOpenPicker = { showSetPicker = true },
+                        onClear = { viewModel.onSetSelected(null) }
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -133,14 +163,20 @@ private fun SearchContent(
     when (state) {
         is SearchUiState.Idle -> MessageView(
             title = "Search the card database",
-            message = "Look up any of ${"%,d".format(cardCount)} cards by name, like Charizard ex or Umbreon VMAX.",
+            message = "Look up any of ${"%,d".format(cardCount)} cards by name. Add a set name or code " +
+                "to narrow it down, like charizard 151 or charizard OBF, or pick a set above.",
             modifier = Modifier.padding(bottom = bottomPadding)
         )
         is SearchUiState.Success -> {
             if (state.results.isEmpty()) {
                 MessageView(
                     title = "No cards found",
-                    message = "Nothing matches \u201c${state.query.trim()}\u201d. Check the spelling or use fewer words.",
+                    message = if (state.set != null) {
+                        "Nothing in ${state.set.name} matches \u201c${state.query.trim()}\u201d. " +
+                            "Check the spelling or search all sets."
+                    } else {
+                        "Nothing matches \u201c${state.query.trim()}\u201d. Check the spelling or use fewer words."
+                    },
                     modifier = Modifier.padding(bottom = bottomPadding)
                 )
             } else {
@@ -151,6 +187,20 @@ private fun SearchContent(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    if (state.set != null) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Text(
+                                text = if (state.query.isBlank()) {
+                                    "${state.set.name}: ${state.results.size} cards"
+                                } else {
+                                    "${state.results.size} in ${state.set.name}"
+                                },
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
+                    }
                     items(state.results, key = { it.id }) { card ->
                         CardTile(
                             name = card.name,
@@ -212,13 +262,13 @@ private fun CatalogUpdateBanner(done: Int, total: Int) {
 }
 
 @Composable
-private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
+private fun SearchField(query: String, onQueryChange: (String) -> Unit, autoFocus: Boolean) {
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     // Open the keyboard on first entry only, not when coming back from a card
     var autoFocused by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        if (!autoFocused) {
+        if (autoFocus && !autoFocused) {
             focusRequester.requestFocus()
             autoFocused = true
         }

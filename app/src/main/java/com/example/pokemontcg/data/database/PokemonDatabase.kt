@@ -5,14 +5,18 @@ import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.AutoMigrationSpec
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ChaseCardEntity::class, CatalogCardEntity::class, CardSetEntity::class, CatalogFileEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
     autoMigrations = [
         // 2: card catalog tables
-        AutoMigration(from = 1, to = 2)
+        AutoMigration(from = 1, to = 2),
+        // 3: set collector codes (card_sets.ptcgoCode)
+        AutoMigration(from = 2, to = 3, spec = Migration2To3::class)
     ]
 )
 abstract class PokemonDatabase : RoomDatabase() {
@@ -40,5 +44,12 @@ abstract class PokemonDatabase : RoomDatabase() {
                 instance
             }
         }
+    }
+}
+
+/** Forgets the sets file's hash so the next sync downloads it again and fills in the new codes. */
+class Migration2To3 : AutoMigrationSpec {
+    override fun onPostMigrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DELETE FROM catalog_files WHERE path = 'sets/en.json'")
     }
 }

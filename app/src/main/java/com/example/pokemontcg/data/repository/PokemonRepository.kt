@@ -3,6 +3,7 @@ package com.example.pokemontcg.data.repository
 import com.example.pokemontcg.data.catalog.CatalogSync
 import com.example.pokemontcg.data.catalog.SyncState
 import com.example.pokemontcg.data.database.CardSearchQuery
+import com.example.pokemontcg.data.database.CardSetWithCount
 import com.example.pokemontcg.data.database.CatalogCardWithSet
 import com.example.pokemontcg.data.database.CatalogDao
 import com.example.pokemontcg.data.database.ChaseCardEntity
@@ -27,13 +28,17 @@ class PokemonRepository(
 
     val catalogCardCount: Flow<Int> = catalogDao.observeCardCount()
 
+    /** Sets that have cards, newest first. */
+    val catalogSets: Flow<List<CardSetWithCount>> = catalogDao.observeSets()
+
     fun syncCatalog() = catalogSync.sync()
 
     /** Emits the saved card, or null while it isn't on the chase list. */
     fun observeSavedCard(cardId: String): Flow<ChaseCardEntity?> = dao.observeCardById(cardId)
 
-    suspend fun searchCards(query: String): List<Card> {
-        val sql = CardSearchQuery.build(query) ?: return emptyList()
+    /** Searches the whole catalog, or only [setId] when given; a set with no query lists the set. */
+    suspend fun searchCards(query: String, setId: String? = null): List<Card> {
+        val sql = CardSearchQuery.build(query, setId) ?: return emptyList()
         return catalogDao.search(CardSearchQuery.toSqliteQuery(sql)).map { it.toCard() }
     }
 
@@ -68,6 +73,7 @@ private fun CatalogCardWithSet.toCard() = Card(
     setName = setName ?: "Unknown set",
     imageSmall = imageSmall,
     imageLarge = imageLarge,
+    setId = setId,
     setSeries = setSeries,
     releaseDate = releaseDate,
     rarity = rarity,

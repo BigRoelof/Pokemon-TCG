@@ -1,8 +1,10 @@
 package com.example.pokemontcg.ui.search
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pokemontcg.data.catalog.SyncState
+import com.example.pokemontcg.data.database.CardSetWithCount
 import com.example.pokemontcg.data.model.Card
 import com.example.pokemontcg.data.repository.PokemonRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -19,18 +21,33 @@ import kotlinx.coroutines.flow.stateIn
 
 sealed class SearchUiState {
     object Idle : SearchUiState()
-    data class Success(val query: String, val results: List<Card>) : SearchUiState()
+    data class Success(val query: String, val set: CardSetWithCount?, val results: List<Card>) : SearchUiState()
 }
 
 data class CatalogStatus(val cardCount: Int, val sync: SyncState)
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class SearchViewModel(
-    private val repository: PokemonRepository
+    private val repository: PokemonRepository,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    /** True when opened for a set (e.g. from a card's set link): browse instead of typing. */
+    val openedForSet: Boolean = savedStateHandle.get<String>(SET_ID_KEY) != null
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    /** Sets to pick from, newest first. */
+    val sets: StateFlow<List<CardSetWithCount>> = repository.catalogSets
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // The navigation argument lands here too, and the choice survives process death
+    private val selectedSetId: StateFlow<String?> = savedStateHandle.getStateFlow(SET_ID_KEY, null)
+
+    val selectedSet: StateFlow<CardSetWithCount?> = combine(selectedSetId, sets) { id, sets ->
+        sets.firstOrNull { it.id == id }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val catalogStatus: StateFlow<CatalogStatus> =
         combine(repository.catalogCardCount, repository.catalogSyncState, ::CatalogStatus)
@@ -41,11 +58,12 @@ class SearchViewModel(
     val uiState: StateFlow<SearchUiState> =
         combine(
             _searchQuery.debounce { if (it.isBlank()) 0 else 250 },
+            selectedSet,
             repository.catalogCardCount
-        ) { query, _ -> query }
-            .mapLatest { query ->
-                if (query.isBlank()) SearchUiState.Idle
-                else SearchUiState.Success(query, repository.searchCards(query))
+        ) { query, set, _ -> query to set }
+            .mapLatest { (query, set) ->
+                if (query.isBlank() && set == null) SearchUiState.Idle
+                else SearchUiState.Success(query, set, repository.searchCards(query, set?.id))
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SearchUiState.Idle)
 
@@ -58,5 +76,14 @@ class SearchViewModel(
         _searchQuery.value = query
     }
 
+    fun onSetSelected(setId: String?) {
+        savedStateHandle[SET_ID_KEY] = setId
+    }
+
     fun retrySync() = repository.syncCatalog()
+
+    companion object {
+        /** Navigation argument and saved-state key for the selected set. */
+        const val SET_ID_KEY = "setId"
+    }
 }

@@ -38,6 +38,7 @@ data class SetJson(
     val series: String?,
     val total: Int?,
     val releaseDate: String?,
+    val ptcgoCode: String?,
     val images: SetImagesJson?
 )
 
